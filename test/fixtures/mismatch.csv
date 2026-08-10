@@ -1,0 +1,6 @@
+id,amount,notes
+1,100.5,ok
+2,N/A,missing value
+3,200,ok
+4,,"empty number"
+5,9999999999999999999999999,big

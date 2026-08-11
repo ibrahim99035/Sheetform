@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { LogOut, Plus } from "lucide-react";
+import { LogOut, Plus, ShieldCheck } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 import { createClient } from "@/lib/supabase/server";
+import { isSuperAdmin } from "@/lib/admin";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -15,6 +16,7 @@ export default async function AppLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const admin = await isSuperAdmin();
   const initial = (user?.email ?? "?").charAt(0).toUpperCase();
 
   return (
@@ -40,6 +42,16 @@ export default async function AppLayout({
                 <Plus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                 <span className="hidden sm:inline">New dataset</span>
               </Link>
+              {admin && (
+                <Link
+                  href="/admin"
+                  aria-label="Admin panel"
+                  className="flex h-10 w-10 items-center justify-center rounded-md text-muted transition hover:bg-surface-subtle hover:text-foreground sm:h-auto sm:w-auto sm:gap-1.5 sm:px-3 sm:py-1.5"
+                >
+                  <ShieldCheck className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                  <span className="hidden sm:inline">Admin</span>
+                </Link>
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-2">

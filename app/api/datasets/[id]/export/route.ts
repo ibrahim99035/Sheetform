@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { createClient } from "@/lib/supabase/server";
+import { isSuperAdmin } from "@/lib/admin";
 import { STORAGE_BUCKET } from "@/lib/constants";
 import type { Dataset, ViewState } from "@/lib/types";
 
@@ -14,7 +15,7 @@ async function signedOriginalUrl(user: { id: string }, datasetId: string) {
     .eq("id", datasetId)
     .single();
 
-  if (!dataset || dataset.owner_id !== user.id) return null;
+  if (!dataset || (dataset.owner_id !== user.id && !(await isSuperAdmin()))) return null;
 
   const { data } = await admin.storage
     .from(STORAGE_BUCKET)

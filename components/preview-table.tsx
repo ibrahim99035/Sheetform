@@ -63,7 +63,7 @@ export function PreviewTable({
                     <select
                       value={columns[i]?.type ?? "string"}
                       onChange={(e) => updateColumn(i, { type: e.target.value as ColumnType })}
-                      className="w-full rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-muted outline-none transition focus:border-brand"
+                      className="w-full rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-foreground outline-none transition focus:border-brand"
                     >
                       {TYPE_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>

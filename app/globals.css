@@ -181,6 +181,21 @@
     background-color: color-mix(in oklab, var(--brand) 22%, transparent);
   }
 
+  input,
+  textarea,
+  select {
+    caret-color: currentColor;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill {
+    -webkit-text-fill-color: var(--text);
+    -webkit-box-shadow: 0 0 0 1000px var(--surface) inset;
+    caret-color: var(--text);
+  }
+
   *:focus-visible {
     outline: 2px solid color-mix(in oklab, var(--brand) 60%, transparent);
     outline-offset: 2px;

@@ -20,7 +20,14 @@ export function Dialog({ open, onClose, title, description, children, className 
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
-    ref.current?.focus();
+    const container = ref.current;
+    const current = document.activeElement;
+    if (container && !(current && current !== container && container.contains(current))) {
+      const focusable = container.querySelector<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      (focusable ?? container).focus();
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };

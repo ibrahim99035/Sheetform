@@ -51,7 +51,7 @@ export function FileDropzone({ onFile, disabled, accepted = ".csv,.xlsx,.xls" }:
           if (!disabled) handleFiles(e.dataTransfer.files);
         }}
         className={cn(
-          "group flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-all duration-200",
+          "group flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-all duration-200 sm:py-16",
           disabled
             ? "border-border bg-surface-subtle"
             : dragging

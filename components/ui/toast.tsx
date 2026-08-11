@@ -88,7 +88,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {mounted &&
         createPortal(
-          <div className="pointer-events-none fixed bottom-5 right-5 z-[60] flex w-[calc(100vw-2.5rem)] max-w-sm flex-col gap-2">
+          <div className="pointer-events-none fixed right-[max(1.25rem,env(safe-area-inset-right))] bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-[60] flex w-[calc(100vw-2.5rem)] max-w-sm flex-col gap-2">
             {toasts.map((t) => (
               <ToastCard key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
             ))}

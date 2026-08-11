@@ -166,7 +166,7 @@ export function AnalyzeTab({ datasetId, columns, initialStats }: AnalyzeTabProps
         </div>
         <Card>
           <CardContent className="flex flex-wrap items-start gap-x-4 gap-y-4 p-4">
-            <div className="w-44 space-y-1.5">
+            <div className="w-full space-y-1.5 sm:w-44">
               <Label htmlFor="group-col">Group by</Label>
               <Select
                 id="group-col"
@@ -180,7 +180,7 @@ export function AnalyzeTab({ datasetId, columns, initialStats }: AnalyzeTabProps
                 ))}
               </Select>
             </div>
-            <div className="w-44 space-y-1.5">
+            <div className="w-full space-y-1.5 sm:w-44">
               <Label htmlFor="agg-fn">Aggregate</Label>
               <Select
                 id="agg-fn"
@@ -195,7 +195,7 @@ export function AnalyzeTab({ datasetId, columns, initialStats }: AnalyzeTabProps
               </Select>
             </div>
             {aggFn !== "count" && (
-              <div className="w-44 space-y-1.5">
+              <div className="w-full space-y-1.5 sm:w-44">
                 <Label htmlFor="agg-col">On column</Label>
                 <Select
                   id="agg-col"
@@ -210,7 +210,7 @@ export function AnalyzeTab({ datasetId, columns, initialStats }: AnalyzeTabProps
                 </Select>
               </div>
             )}
-            <div className="w-32 space-y-1.5">
+            <div className="w-full space-y-1.5 sm:w-32">
               <Label htmlFor="top-n">Top N</Label>
               <Input
                 id="top-n"
@@ -221,7 +221,7 @@ export function AnalyzeTab({ datasetId, columns, initialStats }: AnalyzeTabProps
                 onChange={(e) => setTopN(Number(e.target.value) || 10)}
               />
             </div>
-            <div className="w-40 space-y-1.5">
+            <div className="w-full space-y-1.5 sm:w-40">
               <Label htmlFor="min-count">Min group size</Label>
               <Input
                 id="min-count"
@@ -272,7 +272,7 @@ export function AnalyzeTab({ datasetId, columns, initialStats }: AnalyzeTabProps
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                     <XAxis
                       dataKey="label"
-                      interval={0}
+                      interval={Math.max(0, Math.ceil(chartData.length / 6) - 1)}
                       angle={-20}
                       height={60}
                       tick={{ fontSize: 11, fill: "var(--text-muted)" }}

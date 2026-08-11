@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ArrowUpDown, Inbox, Loader2 } from "lucide-react";
@@ -75,6 +75,31 @@ export function DataTable({
     value: string;
   } | null>(null);
 
+  const tapRef = useRef<{ x: number; y: number; t: number } | null>(null);
+
+  const onCellPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "touch") {
+      tapRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
+    }
+  };
+
+  const onCellPointerUp = (
+    e: PointerEvent<HTMLDivElement>,
+    rowId: number,
+    columnKey: string,
+    value: unknown,
+  ) => {
+    const tap = tapRef.current;
+    tapRef.current = null;
+    if (!tap || e.pointerType !== "touch") return;
+    const dx = e.clientX - tap.x;
+    const dy = e.clientY - tap.y;
+    const dt = performance.now() - tap.t;
+    if (Math.hypot(dx, dy) < 10 && dt < 350) {
+      startEdit(rowId, columnKey, value);
+    }
+  };
+
   const startEdit = (rowId: number, columnKey: string, current: unknown) => {
     setEditing({
       rowId,
@@ -103,11 +128,11 @@ export function DataTable({
     <div className="space-y-2">
       <div
         ref={parentRef}
-        className="h-[62vh] overflow-auto rounded-xl border border-border bg-surface shadow-sm shadow-black/[0.02]"
+        className="h-[55vh] overflow-auto rounded-xl border border-border bg-surface shadow-sm shadow-black/[0.02] sm:h-[62vh]"
       >
         <div className="sticky top-0 z-10 flex w-max min-w-full border-b border-border bg-surface-subtle/90 backdrop-blur-sm">
           <div
-            className="flex shrink-0 items-center px-3 font-mono text-[11px] font-medium text-faint"
+            className="sticky left-0 z-[2] flex shrink-0 items-center bg-surface-subtle px-3 font-mono text-[11px] font-medium text-faint"
             style={{ width: NUM_WIDTH }}
           >
             #
@@ -170,7 +195,7 @@ export function DataTable({
                   style={{ height: virtualRow.size, transform: `translateY(${virtualRow.start}px)` }}
                 >
                   <div
-                    className="flex shrink-0 items-center border-r border-border bg-surface-subtle/50 px-3 font-mono text-xs text-faint"
+                    className="sticky left-0 z-[1] flex shrink-0 items-center border-r border-border bg-surface px-3 font-mono text-xs text-faint"
                     style={{ width: NUM_WIDTH }}
                   >
                     {item.row_index}
@@ -192,7 +217,10 @@ export function DataTable({
                         className={cellClassName}
                         style={{ width: COL_WIDTH }}
                         onDoubleClick={() => startEdit(item.row_id, column.key, value)}
-                        title="Double-click to edit"
+                        onPointerDown={onCellPointerDown}
+                        onPointerUp={(e) => onCellPointerUp(e, item.row_id, column.key, value)}
+                        onPointerCancel={() => (tapRef.current = null)}
+                        title="Tap or double-click to edit"
                       >
                         {isEditing ? (
                           <input

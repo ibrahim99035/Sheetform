@@ -8,7 +8,9 @@ export function Logo({ className, iconOnly = false }: { className?: string; icon
         <Table2 className="h-4 w-4" />
       </span>
       {!iconOnly && (
-        <span className="text-[15px] font-semibold tracking-tight text-foreground">Sheetform</span>
+        <span className="hidden min-[360px]:inline text-[15px] font-semibold tracking-tight text-foreground">
+          Sheetform
+        </span>
       )}
     </span>
   );

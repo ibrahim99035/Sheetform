@@ -306,7 +306,7 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
             <RotateCw className="h-3.5 w-3.5" />
             Redo
           </Button>
-          <div className="flex items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5">
+          <div className="flex flex-wrap items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5">
             <span className="flex items-center gap-1 px-1.5 pl-2 text-xs font-medium text-faint">
               <Download className="h-3.5 w-3.5" />
               Export
@@ -378,7 +378,7 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
             <Select
               value={filterDraft.key}
               onChange={(e) => setFilterDraft({ ...filterDraft, key: e.target.value })}
-              className="w-40"
+              className="w-full sm:w-40"
             >
               {columns.map((c) => (
                 <option key={c.key} value={c.key}>
@@ -389,7 +389,7 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
             <Select
               value={filterDraft.op}
               onChange={(e) => setFilterDraft({ ...filterDraft, op: e.target.value as FilterOp })}
-              className="w-40"
+              className="w-full sm:w-40"
             >
               {FILTER_OPS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -405,10 +405,10 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
                   if (e.key === "Enter") addFilter();
                 }}
                 placeholder="Value…"
-                className="w-40"
+                className="w-full sm:w-40"
               />
             )}
-            <Button onClick={addFilter} size="sm">
+            <Button onClick={addFilter} size="sm" className="flex-1 sm:flex-none">
               <Plus className="h-3.5 w-3.5" />
               Add
             </Button>

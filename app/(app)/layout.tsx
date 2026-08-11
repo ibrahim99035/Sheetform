@@ -28,16 +28,17 @@ export default async function AppLayout({
             <nav className="flex items-center gap-1 text-sm">
               <Link
                 href="/datasets"
-                className="rounded-md px-3 py-1.5 text-muted transition hover:bg-surface-subtle hover:text-foreground"
+                className="rounded-md px-3 py-2 text-muted transition hover:bg-surface-subtle hover:text-foreground sm:py-1.5"
               >
                 Datasets
               </Link>
               <Link
                 href="/datasets/new"
-                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-muted transition hover:bg-surface-subtle hover:text-foreground"
+                aria-label="New dataset"
+                className="flex h-10 w-10 items-center justify-center rounded-md text-muted transition hover:bg-surface-subtle hover:text-foreground sm:h-auto sm:w-auto sm:gap-1.5 sm:px-3 sm:py-1.5"
               >
-                <Plus className="h-3.5 w-3.5" />
-                New dataset
+                <Plus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                <span className="hidden sm:inline">New dataset</span>
               </Link>
             </nav>
           </div>
@@ -54,7 +55,7 @@ export default async function AppLayout({
             <form action={signOut}>
               <button
                 type="submit"
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-muted transition hover:bg-surface-subtle hover:text-foreground"
+                className="inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-muted transition hover:bg-surface-subtle hover:text-foreground sm:h-8"
               >
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Sign out</span>

@@ -98,7 +98,7 @@ export function DatasetList({ initial }: { initial: Dataset[] }) {
           <li key={dataset.id} className="animate-fade-in" style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }}>
             <Link
               href={`/datasets/${dataset.id}`}
-              className="group flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-surface-subtle/70 sm:px-5"
+              className="group flex items-center gap-4 px-4 py-4 transition-colors hover:bg-surface-subtle/70 sm:px-5 sm:py-3.5"
             >
               <FileIcon name={dataset.original_filename} />
               <div className="min-w-0 flex-1">

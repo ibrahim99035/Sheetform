@@ -148,9 +148,39 @@ horizontal overflow, sticky `#` column after horizontal scroll, header/nav
 visible, tap-to-edit opens a focused input, analyze chart renders without
 overflow.
 
+## Product vision (draft — subject to change)
+
+The direction is NOT set in stone; this captures where the app is heading as
+of Aug 2026. Tonight's stakeholder meeting may provide the full picture and
+reshape it.
+
+- **From generic tool → managed service for pharmacies.** The superadmin
+  (operator) is the primary user of a real business service: client
+  pharmacies supply their data (the "datasets"), and the operator runs
+  operations + analysis on that data to produce **advice / insights** for each
+  pharmacy.
+- **Advice delivery** — the produced analysis/advice may be sent to the
+  pharmacy **over email and/or WhatsApp** (likely Supabase email / WhatsApp
+  Business API or similar). No delivery channel is built or chosen yet.
+- **AI integration (possible)** — an AI layer could summarize/interpret
+  analyses and help draft the advice. Nothing is built or decided.
+- **Advanced user model (possible)** — beyond the current simple
+  authenticated-user + superadmin split: e.g., client organizations,
+  pharmacy accounts, per-client data scoping, billing/plans, operator vs
+  owner permissions. None of it is designed yet.
+- **Implications for the current codebase** — today's superadmin full-control
+  and export/modal flows are a natural foundation, but anything built now
+  should favor the generic primitives (datasets owned by a user, admin
+  traversal, export/analysis) rather than hard-coding pharmacy-specific
+  concepts until the meeting clarifies the model.
+
 ## Roadmap
 
 - **Phase 7 (planned, NOT implemented):** installable PWA — `manifest.ts` +
   icons + service worker; free push notifications later via Web Push/VAPID
   (browser push service, no paid provider). Push triggers deferred by
   decision.
+- **Next (unconfirmed):** decide the pharmacy service model after the
+  stakeholder meeting — user/tenant model, advice workflow, email/WhatsApp
+  delivery, and optional AI assist. Update these specs once the picture is
+  full.

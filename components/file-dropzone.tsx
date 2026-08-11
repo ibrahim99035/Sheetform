@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { UploadCloud } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 interface FileDropzoneProps {
   onFile: (file: File) => void;
@@ -48,18 +50,27 @@ export function FileDropzone({ onFile, disabled, accepted = ".csv,.xlsx,.xls" }:
           setDragging(false);
           if (!disabled) handleFiles(e.dataTransfer.files);
         }}
-        className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-16 text-center transition ${
+        className={cn(
+          "group flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-all duration-200",
           disabled
-            ? "border-neutral-200 bg-neutral-50"
+            ? "border-border bg-surface-subtle"
             : dragging
-              ? "border-neutral-900 bg-neutral-100"
-              : "border-neutral-300 bg-white hover:border-neutral-400 hover:bg-neutral-50"
-        }`}
+              ? "scale-[1.005] border-brand bg-brand-subtle"
+              : "border-border-strong bg-surface hover:border-brand/60 hover:bg-surface-subtle/60",
+        )}
       >
-        <p className="text-base font-medium text-neutral-800">Drop a file here</p>
-        <p className="mt-1 text-sm text-neutral-500">
-          or click to browse · .csv, .xlsx
-        </p>
+        <div
+          className={cn(
+            "mb-4 flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200",
+            dragging
+              ? "scale-110 bg-brand text-brand-contrast"
+              : "bg-brand-subtle text-brand group-hover:scale-105",
+          )}
+        >
+          <UploadCloud className="h-6 w-6" />
+        </div>
+        <p className="text-base font-medium text-foreground">Drop your file here</p>
+        <p className="mt-1 text-sm text-muted">or click to browse · .csv, .xlsx</p>
       </div>
       <input
         ref={inputRef}
@@ -71,7 +82,11 @@ export function FileDropzone({ onFile, disabled, accepted = ".csv,.xlsx,.xls" }:
           e.target.value = "";
         }}
       />
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      {error && (
+        <p className="mt-3 rounded-lg border border-danger/25 bg-danger-subtle px-3 py-2 text-sm text-danger-text">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

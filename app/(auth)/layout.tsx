@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function AuthLayout({
   children,
@@ -6,19 +8,25 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-full flex-1 items-center justify-center bg-neutral-50 px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold text-neutral-900">Sheetform</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            CSV &amp; Excel analytics
-          </p>
+    <div className="relative flex min-h-full flex-1 items-center justify-center overflow-hidden bg-background px-4 py-12">
+      <div className="absolute right-5 top-5">
+        <ThemeToggle />
+      </div>
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-[-15%] h-[400px] w-[640px] -translate-x-1/2 rounded-full bg-brand/15 blur-3xl" />
+      </div>
+      <div className="relative w-full max-w-sm">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <Link href="/" aria-label="Sheetform home">
+            <Logo />
+          </Link>
+          <p className="mt-2 text-sm text-muted">CSV &amp; Excel analytics</p>
         </div>
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <div className="animate-scale-in rounded-2xl border border-border bg-surface p-6 shadow-xl shadow-black/[0.04]">
           {children}
         </div>
-        <div className="mt-4 text-center text-sm text-neutral-500">
-          <Link href="/" className="hover:underline">
+        <div className="mt-4 text-center text-sm text-muted">
+          <Link href="/" className="transition hover:text-foreground">
             ← Back to home
           </Link>
         </div>

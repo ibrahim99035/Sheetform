@@ -1,8 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import {
+  BarChart3,
+  CopyX,
+  Download,
+  History,
+  Loader2,
+  PencilLine,
+  Plus,
+  RotateCcw,
+  RotateCw,
+  Table2,
+  Trash2,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { useSupabase } from "@/lib/supabase/provider";
 import { DataTable } from "@/components/data-table";
 import { AnalyzeTab } from "@/components/analyze-tab";
@@ -11,6 +26,14 @@ import { StatusBadge } from "@/components/status-badge";
 import { applyOperation, redoOperation, undoOperation } from "@/lib/dataset-api";
 import { makeStorageKey, coerceValue } from "@/lib/coerce";
 import { viewSignature } from "@/lib/view";
+import { useToast } from "@/components/ui/toast";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Tabs } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import type {
   ColumnStats,
   Dataset,
@@ -44,11 +67,11 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
   const supabase = useSupabase();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { toast } = useToast();
 
   const [ds, setDs] = useState<Dataset>(dataset);
   const [tab, setTab] = useState<Tab>("data");
   const [view, setView] = useState<ViewState>({ sort: null, filters: [] });
-  const [notice, setNotice] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [busyOp, setBusyOp] = useState<string | null>(null);
 
   const columns = ds.column_defs;
@@ -80,7 +103,7 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
           setDs((prev) => ({ ...prev, ...record }));
           if (record.status === "ready") {
             invalidateDataset();
-            setNotice({ kind: "ok", text: "Import finished." });
+            toast({ text: "Import finished." });
           }
         },
       )
@@ -94,27 +117,58 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, ds.id, invalidateDataset, router]);
+  }, [supabase, ds.id, invalidateDataset, router, toast]);
+
+  const handleUndo = useCallback(async () => {
+    setBusyOp("undo");
+    const res = await undoOperation(supabase, ds.id);
+    setBusyOp(null);
+    if (!res.ok) {
+      toast({ kind: "error", text: res.error ?? "Nothing to undo" });
+      return;
+    }
+    invalidateDataset();
+    toast({ text: "Undid last operation" });
+  }, [supabase, ds.id, invalidateDataset, toast]);
+
+  const handleRedo = useCallback(async () => {
+    setBusyOp("redo");
+    const res = await redoOperation(supabase, ds.id);
+    setBusyOp(null);
+    if (!res.ok) {
+      toast({ kind: "error", text: res.error ?? "Nothing to redo" });
+      return;
+    }
+    invalidateDataset();
+    toast({ text: "Redid operation" });
+  }, [supabase, ds.id, invalidateDataset, toast]);
+
+  const handleUndoRef = useRef(handleUndo);
+  useEffect(() => {
+    handleUndoRef.current = handleUndo;
+  }, [handleUndo]);
 
   const runOp = useCallback(
     async (operation: string, params: Record<string, unknown>, okMessage?: string) => {
       setBusyOp(operation);
-      setNotice(null);
       try {
         const res = await applyOperation(supabase, ds.id, operation, params);
         if (!res.ok) {
-          setNotice({ kind: "err", text: res.error ?? "Operation failed" });
+          toast({ kind: "error", text: res.error ?? "Operation failed" });
           return;
         }
         invalidateDataset();
-        setNotice({ kind: "ok", text: okMessage ?? res.message ?? "Done" });
+        toast({
+          text: okMessage ?? res.message ?? "Done",
+          action: { label: "Undo", onClick: () => handleUndoRef.current() },
+        });
       } catch (e) {
-        setNotice({ kind: "err", text: e instanceof Error ? e.message : "Operation failed" });
+        toast({ kind: "error", text: e instanceof Error ? e.message : "Operation failed" });
       } finally {
         setBusyOp(null);
       }
     },
-    [supabase, ds.id, invalidateDataset],
+    [supabase, ds.id, invalidateDataset, toast],
   );
 
   const handleCommitCell = useCallback(
@@ -130,30 +184,6 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
     [runOp, ds.column_defs],
   );
 
-  const handleUndo = useCallback(async () => {
-    setBusyOp("undo");
-    const res = await undoOperation(supabase, ds.id);
-    setBusyOp(null);
-    if (!res.ok) {
-      setNotice({ kind: "err", text: res.error ?? "Nothing to undo" });
-      return;
-    }
-    invalidateDataset();
-    setNotice({ kind: "ok", text: "Undid last operation" });
-  }, [supabase, ds.id, invalidateDataset]);
-
-  const handleRedo = useCallback(async () => {
-    setBusyOp("redo");
-    const res = await redoOperation(supabase, ds.id);
-    setBusyOp(null);
-    if (!res.ok) {
-      setNotice({ kind: "err", text: res.error ?? "Nothing to redo" });
-      return;
-    }
-    invalidateDataset();
-    setNotice({ kind: "ok", text: "Redid operation" });
-  }, [supabase, ds.id, invalidateDataset]);
-
   // ---- filter bar state ----
   const [filterDraft, setFilterDraft] = useState<{ key: string; op: FilterOp; value: string }>({
     key: columns[0]?.key ?? "",
@@ -166,12 +196,15 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
     const col = columns.find((c) => c.key === filterDraft.key);
     const compareOps = ["gt", "gte", "lt", "lte", "equals", "not_equals"];
     if (compareOps.includes(filterDraft.op)) {
-      if (col?.type === "numeric" && !/^-?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/.test(filterDraft.value)) {
-        setNotice({ kind: "err", text: "Enter a valid number for this filter." });
+      if (
+        col?.type === "numeric" &&
+        !/^-?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/.test(filterDraft.value)
+      ) {
+        toast({ kind: "error", text: "Enter a valid number for this filter." });
         return;
       }
       if (col?.type === "date" && isNaN(Date.parse(filterDraft.value))) {
-        setNotice({ kind: "err", text: "Enter a valid date for this filter." });
+        toast({ kind: "error", text: "Enter a valid date for this filter." });
         return;
       }
     }
@@ -179,7 +212,6 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
     if (spec.op === "is_empty" || spec.op === "is_not_empty") spec.value = "";
     setView((v) => ({ ...v, filters: [...v.filters, spec] }));
     setFilterDraft({ ...filterDraft, value: "" });
-    setNotice(null);
   };
 
   const removeFilter = (index: number) => {
@@ -191,7 +223,7 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
     runOp(
       "filter_rows",
       { filters: view.filters, label: `${view.filters.length} filter(s)` },
-      "Rows removed (undo available)",
+      "Rows removed",
     );
   };
 
@@ -217,7 +249,7 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
     runOp(
       "dedupe",
       { columns: dedupeColumns, label: "dedupe" },
-      "Duplicates removed (undo available)",
+      "Duplicates removed",
     );
     setDedupeOpen(false);
     setDedupeColumns([]);
@@ -236,158 +268,154 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
     [ds.id, sig],
   );
 
+  const importing = ds.status === "pending" || ds.status === "processing";
+
   return (
-    <div className="space-y-4">
+    <div className="animate-slide-up space-y-5">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="truncate text-xl font-semibold text-neutral-900">{ds.name}</h1>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5">
+            <h1 className="truncate text-xl font-semibold tracking-tight text-foreground">
+              {ds.name}
+            </h1>
             <StatusBadge status={ds.status} />
           </div>
-          <p className="mt-0.5 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-muted">
             {ds.original_filename}
             {ds.sheet_name ? ` · ${ds.sheet_name}` : ""} ·{" "}
             {ds.row_count.toLocaleString()} imported rows
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
             onClick={handleUndo}
             disabled={busy}
-            className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-40"
+            size="sm"
             title="Undo last operation"
           >
-            ↺ Undo
-          </button>
-          <button
+            <RotateCcw className="h-3.5 w-3.5" />
+            Undo
+          </Button>
+          <Button
             onClick={handleRedo}
             disabled={busy}
-            className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-40"
+            size="sm"
             title="Redo last undone operation"
           >
-            ↻ Redo
-          </button>
-          <div className="flex items-center gap-1 rounded-md border border-neutral-300 bg-white px-1 py-1">
-            <span className="px-1 text-xs text-neutral-500">Export</span>
-            <a
-              href={exportHref}
-              className="rounded px-2 py-1 text-sm text-neutral-700 transition hover:bg-neutral-100"
-            >
-              CSV
-            </a>
-            <a
-              href={`/api/datasets/${ds.id}/export?format=xlsx&view=${encodeURIComponent(sig)}`}
-              className="rounded px-2 py-1 text-sm text-neutral-700 transition hover:bg-neutral-100"
-            >
-              XLSX
-            </a>
-            <a
-              href={`/api/datasets/${ds.id}/export?format=original`}
-              className="rounded px-2 py-1 text-sm text-neutral-700 transition hover:bg-neutral-100"
-              title="Download the untouched original file"
-            >
-              Original
-            </a>
+            <RotateCw className="h-3.5 w-3.5" />
+            Redo
+          </Button>
+          <div className="flex items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5">
+            <span className="flex items-center gap-1 px-1.5 pl-2 text-xs font-medium text-faint">
+              <Download className="h-3.5 w-3.5" />
+              Export
+            </span>
+            {[
+              { label: "CSV", href: exportHref },
+              { label: "XLSX", href: `/api/datasets/${ds.id}/export?format=xlsx&view=${encodeURIComponent(sig)}` },
+              {
+                label: "Original",
+                href: `/api/datasets/${ds.id}/export?format=original`,
+                title: "Download the untouched original file",
+              },
+            ].map((opt) => (
+              <a
+                key={opt.label}
+                href={opt.href}
+                title={opt.title}
+                className="rounded-md px-2 py-1 text-[13px] font-medium text-muted transition hover:bg-surface-subtle hover:text-foreground"
+              >
+                {opt.label}
+              </a>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Status messages */}
-      {notice && (
-        <div
-          className={`rounded-lg px-3 py-2 text-sm ${
-            notice.kind === "ok"
-              ? "bg-emerald-50 text-emerald-700"
-              : "bg-red-50 text-red-700"
-          }`}
-        >
-          {notice.text}
-        </div>
-      )}
+      {/* Status banners */}
       {ds.status === "error" && (
-        <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          Import failed: {ds.error_message}
+        <div className="flex items-start gap-3 rounded-xl border border-danger/25 bg-danger-subtle px-4 py-3 text-sm text-danger-text">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-medium">Import failed</p>
+            <p className="mt-0.5">{ds.error_message}</p>
+          </div>
         </div>
       )}
-      {(ds.status === "pending" || ds.status === "processing") && (
-        <div className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
-          Import is {ds.status} — the table will appear when it finishes.
+      {importing && (
+        <div className="flex items-center gap-3 rounded-xl border border-warning/25 bg-warning-subtle px-4 py-3 text-sm text-warning-text">
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+          <div>
+            <p className="font-medium">
+              Import is {ds.status} — the table will appear when it finishes.
+            </p>
+            {ds.status === "pending" && (
+              <p className="mt-0.5 text-warning-text/80">
+                The import hasn’t started yet. If it stays pending, try re-uploading.
+              </p>
+            )}
+          </div>
         </div>
-      )}
-      {ds.status === "pending" && (
-        <p className="text-sm text-neutral-500">
-          The import hasn&apos;t started yet. If it stays pending, try re-uploading.
-        </p>
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-neutral-200">
-        {( [["data", "Data"], ["analyze", "Analyze"], ["activity", "Activity"]] as [Tab, string][]).map(
-          ([value, label]) => (
-            <button
-              key={value}
-              onClick={() => setTab(value)}
-              className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition ${
-                tab === value
-                  ? "border-neutral-900 text-neutral-900"
-                  : "border-transparent text-neutral-500 hover:text-neutral-800"
-              }`}
-            >
-              {label}
-            </button>
-          ),
-        )}
-      </div>
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        items={[
+          { value: "data", label: "Data", icon: <Table2 className="h-3.5 w-3.5" /> },
+          { value: "analyze", label: "Analyze", icon: <BarChart3 className="h-3.5 w-3.5" /> },
+          { value: "activity", label: "Activity", icon: <History className="h-3.5 w-3.5" /> },
+        ]}
+      />
 
       {tab === "data" && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {/* Filter bar */}
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 bg-white p-3">
-            <span className="text-sm font-medium text-neutral-700">View filter</span>
-            <select
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3 shadow-sm shadow-black/[0.02]">
+            <span className="mr-1 text-sm font-medium text-muted">View filter</span>
+            <Select
               value={filterDraft.key}
               onChange={(e) => setFilterDraft({ ...filterDraft, key: e.target.value })}
-              className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-neutral-500"
+              className="w-40"
             >
               {columns.map((c) => (
                 <option key={c.key} value={c.key}>
                   {c.label}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
               value={filterDraft.op}
               onChange={(e) => setFilterDraft({ ...filterDraft, op: e.target.value as FilterOp })}
-              className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-neutral-500"
+              className="w-40"
             >
               {FILTER_OPS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
               ))}
-            </select>
+            </Select>
             {filterDraft.op !== "is_empty" && filterDraft.op !== "is_not_empty" && (
-              <input
+              <Input
                 value={filterDraft.value}
                 onChange={(e) => setFilterDraft({ ...filterDraft, value: e.target.value })}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") addFilter();
                 }}
                 placeholder="Value…"
-                className="w-40 rounded-md border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-neutral-500"
+                className="w-40"
               />
             )}
-            <button
-              onClick={addFilter}
-              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-100"
-            >
-              + Add
-            </button>
+            <Button onClick={addFilter} size="sm">
+              <Plus className="h-3.5 w-3.5" />
+              Add
+            </Button>
             {activeFilters && (
               <button
                 onClick={() => setView((v) => ({ ...v, filters: [] }))}
-                className="text-sm text-neutral-500 underline-offset-2 hover:underline"
+                className="px-1 text-sm text-muted underline-offset-2 transition hover:text-foreground hover:underline"
               >
                 Clear
               </button>
@@ -402,18 +430,18 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
                 return (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-neutral-300 bg-neutral-100 px-2.5 py-1 text-xs text-neutral-700"
+                    className="inline-flex animate-fade-in items-center gap-1.5 rounded-full border border-brand/25 bg-brand-subtle px-3 py-1 text-xs font-medium text-brand"
                   >
                     {col?.label}: {f.op}
                     {f.op !== "is_empty" && f.op !== "is_not_empty" && (
-                      <span className="font-medium">“{f.value}”</span>
+                      <span className="font-semibold">“{f.value}”</span>
                     )}
                     <button
                       onClick={() => removeFilter(i)}
-                      className="text-neutral-400 hover:text-neutral-700"
+                      className="-mr-1 rounded-full p-0.5 text-brand/70 transition hover:text-brand"
                       aria-label="Remove filter"
                     >
-                      ×
+                      <X className="h-3 w-3" />
                     </button>
                   </span>
                 );
@@ -423,28 +451,28 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
 
           {/* Transform toolbar */}
           <div className="flex flex-wrap items-center gap-2">
-            <button
+            <Button
               onClick={deleteMatchingRows}
               disabled={!activeFilters || busy}
-              className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-40"
-              title={activeFilters ? "Permanently remove rows matching the current view filter" : "Add a view filter first"}
+              variant="danger"
+              size="sm"
+              title={
+                activeFilters
+                  ? "Permanently remove rows matching the current view filter"
+                  : "Add a view filter first"
+              }
             >
+              <Trash2 className="h-3.5 w-3.5" />
               Delete matching rows
-            </button>
-            <button
-              onClick={() => setRenameOpen(true)}
-              disabled={busy}
-              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-40"
-            >
+            </Button>
+            <Button onClick={() => setRenameOpen(true)} disabled={busy} size="sm">
+              <PencilLine className="h-3.5 w-3.5" />
               Rename column…
-            </button>
-            <button
-              onClick={() => setDedupeOpen(true)}
-              disabled={busy}
-              className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-40"
-            >
+            </Button>
+            <Button onClick={() => setDedupeOpen(true)} disabled={busy} size="sm">
+              <CopyX className="h-3.5 w-3.5" />
               Remove duplicates…
-            </button>
+            </Button>
           </div>
 
           {ds.status === "ready" && (
@@ -464,95 +492,97 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
       )}
 
       {tab === "activity" && (
-        <ActivityTab datasetId={ds.id} initialOps={initialOps} onUndo={handleUndo} onRedo={handleRedo} />
+        <ActivityTab
+          datasetId={ds.id}
+          initialOps={initialOps}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+        />
       )}
 
       {/* Rename dialog */}
-      {renameOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setRenameOpen(false)}>
-          <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-3 text-base font-semibold text-neutral-900">Rename column</h3>
-            <label className="mb-1 block text-sm text-neutral-600">Column</label>
-            <select
+      <Dialog
+        open={renameOpen}
+        onClose={() => setRenameOpen(false)}
+        title="Rename column"
+        description="Pick a column and give it a new name."
+      >
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="rename-col">Column</Label>
+            <Select
+              id="rename-col"
               value={renameCol}
               onChange={(e) => setRenameCol(e.target.value)}
-              className="mb-3 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
             >
               {columns.map((c) => (
                 <option key={c.key} value={c.key}>
                   {c.label}
                 </option>
               ))}
-            </select>
-            <label className="mb-1 block text-sm text-neutral-600">New name</label>
-            <input
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="rename-label">New name</Label>
+            <Input
+              id="rename-label"
               value={renameLabel}
               onChange={(e) => setRenameLabel(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") submitRename();
               }}
-              className="mb-4 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
               placeholder="New label"
               autoFocus
             />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setRenameOpen(false)}
-                className="rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitRename}
-                disabled={!renameLabel.trim()}
-                className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
-              >
-                Rename
-              </button>
-            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button onClick={() => setRenameOpen(false)} size="sm">
+              Cancel
+            </Button>
+            <Button
+              onClick={submitRename}
+              disabled={!renameLabel.trim()}
+              variant="primary"
+              size="sm"
+            >
+              Rename
+            </Button>
           </div>
         </div>
-      )}
+      </Dialog>
 
       {/* Dedupe dialog */}
-      {dedupeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setDedupeOpen(false)}>
-          <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-1 text-base font-semibold text-neutral-900">Remove duplicates</h3>
-            <p className="mb-3 text-sm text-neutral-500">
-              Pick columns to compare. With none selected, whole rows are compared
-              (the first occurrence of each duplicate is kept).
-            </p>
-            <div className="mb-4 max-h-56 space-y-1 overflow-y-auto rounded-md border border-neutral-200 p-2">
-              {columns.map((c) => (
-                <label key={c.key} className="flex items-center gap-2 px-1 py-0.5 text-sm text-neutral-800">
-                  <input
-                    type="checkbox"
-                    checked={dedupeColumns.includes(c.key)}
-                    onChange={() => toggleDedupeColumn(c.key)}
-                    className="rounded"
-                  />
-                  {c.label}
-                </label>
-              ))}
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setDedupeOpen(false)}
-                className="rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+      <Dialog
+        open={dedupeOpen}
+        onClose={() => setDedupeOpen(false)}
+        title="Remove duplicates"
+        description="Pick columns to compare. With none selected, whole rows are compared (the first occurrence of each duplicate is kept)."
+      >
+        <div className="space-y-4">
+          <div className="max-h-56 space-y-0.5 overflow-y-auto rounded-lg border border-border p-2">
+            {columns.map((c) => (
+              <label
+                key={c.key}
+                className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-foreground transition hover:bg-surface-subtle"
               >
-                Cancel
-              </button>
-              <button
-                onClick={submitDedupe}
-                className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
-              >
-                Remove duplicates
-              </button>
-            </div>
+                <Checkbox
+                  checked={dedupeColumns.includes(c.key)}
+                  onChange={() => toggleDedupeColumn(c.key)}
+                />
+                {c.label}
+              </label>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setDedupeOpen(false)} size="sm">
+              Cancel
+            </Button>
+            <Button onClick={submitDedupe} variant="primary" size="sm">
+              Remove duplicates
+            </Button>
           </div>
         </div>
-      )}
+      </Dialog>
     </div>
   );
 }

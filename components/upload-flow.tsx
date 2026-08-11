@@ -2,12 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FileText, Import, RefreshCw } from "lucide-react";
 import { FileDropzone } from "@/components/file-dropzone";
 import { PreviewTable } from "@/components/preview-table";
 import { parseFileForPreview, type PreviewSheet } from "@/lib/parse";
 import { useSupabase } from "@/lib/supabase/provider";
 import type { InferredColumn } from "@/lib/types";
 import { createDataset } from "@/lib/actions/datasets";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Stage = "select" | "ready";
 
@@ -42,7 +48,7 @@ export function UploadFlow() {
         return;
       }
 
-      const chosen = populated.length === 1 ? populated[0] : populated[0];
+      const chosen = populated[0];
       setActiveSheet(chosen);
       setColumns(chosen.inferred);
       setStage("ready");
@@ -97,68 +103,88 @@ export function UploadFlow() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {stage === "select" && (
         <>
           <FileDropzone onFile={handleFile} disabled={busy} />
-          {busy && <p className="text-sm text-neutral-500">Parsing preview…</p>}
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {busy && (
+            <div className="space-y-3 rounded-xl border border-border bg-surface p-5">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-3 w-64" />
+              <div className="grid grid-cols-3 gap-3 pt-1">
+                <Skeleton className="h-20" />
+                <Skeleton className="h-20" />
+                <Skeleton className="h-20" />
+              </div>
+            </div>
+          )}
+          {error && (
+            <p className="rounded-lg border border-danger/25 bg-danger-subtle px-3 py-2 text-sm text-danger-text">
+              {error}
+            </p>
+          )}
         </>
       )}
 
       {stage === "ready" && activeSheet && (
-        <>
+        <div className="space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="truncate text-lg font-semibold text-neutral-900">{file?.name}</h2>
-              <p className="text-sm text-neutral-500">
-                Sheet “{activeSheet.name}” · {activeSheet.rowEstimate.toLocaleString()} rows (est.)
-              </p>
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-subtle text-brand">
+                <FileText className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-semibold text-foreground">
+                  {file?.name}
+                </h2>
+                <p className="text-sm text-muted">
+                  Sheet “{activeSheet.name}” ·{" "}
+                  {activeSheet.rowEstimate.toLocaleString()} rows (est.)
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={reset}
-                disabled={busy}
-                className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-60"
-              >
+              <Button onClick={reset} disabled={busy}>
+                <RefreshCw className="h-4 w-4" />
                 Choose another file
-              </button>
-              <button
-                onClick={handleConfirm}
-                disabled={busy}
-                className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:opacity-60"
-              >
+              </Button>
+              <Button onClick={handleConfirm} disabled={busy} variant="primary">
+                <Import className="h-4 w-4" />
                 {busy ? "Uploading…" : "Import dataset"}
-              </button>
+              </Button>
             </div>
           </div>
 
           {populatedSheets.length > 1 && (
-            <div className="rounded-xl border border-neutral-200 bg-white p-4">
-              <label className="mb-2 block text-sm font-medium text-neutral-700">
-                This file has {sheets.length} sheets with data. Which one do you want to import?
-              </label>
-              <select
-                value={activeSheet.name}
-                onChange={(e) => {
-                  const next = populatedSheets.find((s) => s.name === e.target.value);
-                  if (next) {
-                    setActiveSheet(next);
-                    setColumns(next.inferred);
-                  }
-                }}
-                className="w-full max-w-md rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500"
-              >
-                {populatedSheets.map((s) => (
-                  <option key={s.name} value={s.name}>
-                    {s.name} — {s.rowEstimate.toLocaleString()} rows (est.)
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                <Label htmlFor="sheet-select">
+                  This file has {sheets.length} sheets with data. Which one do you want
+                  to import?
+                </Label>
+                <Select
+                  id="sheet-select"
+                  value={activeSheet.name}
+                  onChange={(e) => {
+                    const next = populatedSheets.find((s) => s.name === e.target.value);
+                    if (next) {
+                      setActiveSheet(next);
+                      setColumns(next.inferred);
+                    }
+                  }}
+                  className="max-w-md"
+                >
+                  {populatedSheets.map((s) => (
+                    <option key={s.name} value={s.name}>
+                      {s.name} — {s.rowEstimate.toLocaleString()} rows (est.)
+                    </option>
+                  ))}
+                </Select>
+              </CardContent>
+            </Card>
           )}
 
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-muted">
             Confirm the column types below. The full file will be parsed server-side
             using these types; values that don’t match a type are imported as empty.
           </p>
@@ -171,8 +197,12 @@ export function UploadFlow() {
             rowHint={`Preview of the first ${Math.max(activeSheet.sampleRows.length, 0)} data rows.`}
           />
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
-        </>
+          {error && (
+            <p className="rounded-lg border border-danger/25 bg-danger-subtle px-3 py-2 text-sm text-danger-text">
+              {error}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

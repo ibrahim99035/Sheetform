@@ -1,7 +1,22 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import {
+  CopyX,
+  Filter,
+  History,
+  PencilLine,
+  PenLine,
+  RotateCcw,
+  RotateCw,
+  type LucideIcon,
+} from "lucide-react";
 import { useSupabase } from "@/lib/supabase/provider";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { cn } from "@/lib/cn";
 import type { Operation } from "@/lib/types";
 
 interface ActivityTabProps {
@@ -27,11 +42,14 @@ function describeOperation(op: Operation): string {
   }
 }
 
-const TYPE_ICON: Record<string, string> = {
-  rename_column: "✎",
-  edit_cell: "✏",
-  filter_rows: "⊘",
-  dedupe: "⧉",
+const TYPE_META: Record<
+  string,
+  { icon: LucideIcon; className: string; label: string }
+> = {
+  rename_column: { icon: PencilLine, className: "bg-info-subtle text-info-text", label: "Rename column" },
+  edit_cell: { icon: PenLine, className: "bg-brand-subtle text-brand", label: "Edit cell" },
+  filter_rows: { icon: Filter, className: "bg-warning-subtle text-warning-text", label: "Filter rows" },
+  dedupe: { icon: CopyX, className: "bg-success-subtle text-success-text", label: "Remove duplicates" },
 };
 
 export function ActivityTab({ datasetId, initialOps, onUndo, onRedo }: ActivityTabProps) {
@@ -39,6 +57,7 @@ export function ActivityTab({ datasetId, initialOps, onUndo, onRedo }: ActivityT
 
   const { data: ops } = useQuery({
     queryKey: ["ops", datasetId],
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("dataset_operations")
@@ -53,70 +72,85 @@ export function ActivityTab({ datasetId, initialOps, onUndo, onRedo }: ActivityT
   });
 
   const latest = ops?.find((o) => o.undone_at === null);
+  const hasRedo = ops?.some((o) => o.undone_at !== null);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-neutral-800">Operation history</h3>
+        <h3 className="text-sm font-semibold text-foreground">Operation history</h3>
         <div className="flex items-center gap-2">
-          <button
-            onClick={onUndo}
-            disabled={!latest}
-            className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-40"
-          >
-            ↺ Undo
-          </button>
-          <button
-            onClick={onRedo}
-            disabled={!ops?.some((o) => o.undone_at !== null)}
-            className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-40"
-          >
-            ↻ Redo
-          </button>
+          <Button onClick={onUndo} disabled={!latest} size="sm">
+            <RotateCcw className="h-3.5 w-3.5" />
+            Undo
+          </Button>
+          <Button onClick={onRedo} disabled={!hasRedo} size="sm">
+            <RotateCw className="h-3.5 w-3.5" />
+            Redo
+          </Button>
         </div>
       </div>
 
       {!ops || ops.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-500">
-          No operations yet. Edit cells or apply transforms on the Data tab.
-        </p>
+        <EmptyState
+          icon={<History className="h-6 w-6" />}
+          title="No operations yet"
+          description="Edit cells or apply transforms on the Data tab to start building a history."
+        />
       ) : (
-        <ol className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 bg-white">
-          {ops.map((op) => (
-            <li
-              key={op.id}
-              className={`flex items-center justify-between gap-3 px-4 py-2.5 ${
-                op.undone_at ? "opacity-50" : ""
-              }`}
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="w-6 text-center text-neutral-400">
-                  {TYPE_ICON[op.operation_type] ?? "•"}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm text-neutral-900">
-                    <span className="capitalize">{op.operation_type.replace("_", " ")}</span>
-                    {op.operation_type !== "rename_column" && (
-                      <span className="text-neutral-500"> — {describeOperation(op)}</span>
+        <Card>
+          <CardHeader>
+            <CardTitle>Applied changes</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ol className="divide-y divide-border/60">
+              {ops.map((op) => {
+                const meta = TYPE_META[op.operation_type] ?? {
+                  icon: History,
+                  className: "bg-surface-subtle text-faint",
+                  label: op.operation_type,
+                };
+                const Icon = meta.icon;
+                return (
+                  <li
+                    key={op.id}
+                    className={cn(
+                      "flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-subtle/40",
+                      op.undone_at && "opacity-50",
                     )}
-                  </p>
-                  <p className="text-xs text-neutral-400">
-                    {new Date(op.applied_at).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                  op.undone_at
-                    ? "bg-neutral-100 text-neutral-500"
-                    : "bg-emerald-50 text-emerald-700"
-                }`}
-              >
-                {op.undone_at ? "Undone" : "Applied"}
-              </span>
-            </li>
-          ))}
-        </ol>
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span
+                        className={cn(
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                          meta.className,
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {meta.label}
+                          {op.operation_type !== "rename_column" && (
+                            <span className="font-normal text-muted">
+                              {" "}
+                              — {describeOperation(op)}
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-faint">
+                          {new Date(op.applied_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant={op.undone_at ? "neutral" : "success"}>
+                      {op.undone_at ? "Undone" : "Applied"}
+                    </Badge>
+                  </li>
+                );
+              })}
+            </ol>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

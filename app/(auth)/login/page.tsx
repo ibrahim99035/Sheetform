@@ -4,8 +4,11 @@ export const metadata = { title: "Sign in · Sheetform" };
 
 export default function LoginPage() {
   return (
-    <div>
-      <h2 className="mb-4 text-lg font-semibold text-neutral-900">Sign in</h2>
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Welcome back</h2>
+        <p className="mt-0.5 text-sm text-muted">Sign in to continue to your datasets.</p>
+      </div>
       <LoginForm />
     </div>
   );

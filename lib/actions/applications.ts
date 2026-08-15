@@ -8,7 +8,7 @@ export interface ApplicationFileInput {
   fileName: string;
   storagePath: string;
   sheetName: string | null;
-  columns: { label: string; type: ColumnType }[];
+  columns: { key: string; label: string; type: ColumnType }[];
   templateCode: string | null;
 }
 

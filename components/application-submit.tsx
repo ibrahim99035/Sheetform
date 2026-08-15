@@ -119,7 +119,7 @@ export function ApplicationSubmit({
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const uploaded: { fileName: string; storagePath: string; sheetName: string | null; columns: { label: string; type: InferredColumn["type"] }[]; templateCode: string | null }[] = [];
+      const uploaded: { fileName: string; storagePath: string; sheetName: string | null; columns: { key: string; label: string; type: InferredColumn["type"] }[]; templateCode: string | null }[] = [];
       for (const f of files) {
         const objectPath = `${user.id}/${crypto.randomUUID()}/${f.file.name}`;
         const { error: uploadError } = await supabase.storage
@@ -130,7 +130,7 @@ export function ApplicationSubmit({
           fileName: f.file.name,
           storagePath: objectPath,
           sheetName: f.sheetName,
-          columns: f.columns.map((c) => ({ label: c.label, type: c.type })),
+          columns: f.columns.map((c) => ({ key: c.key, label: c.label, type: c.type })),
           templateCode: f.templateCode,
         });
       }

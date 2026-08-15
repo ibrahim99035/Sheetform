@@ -1,6 +1,6 @@
 import { SignupForm } from "./signup-form";
 
-export const metadata = { title: "Create account · Sheetform" };
+export const metadata = { title: "Create account · SiroQ" };
 
 export default function SignupPage() {
   return (

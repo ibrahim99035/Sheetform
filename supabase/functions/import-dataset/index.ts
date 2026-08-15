@@ -1,12 +1,13 @@
 import { createClient } from "npm:@supabase/supabase-js@2.47.10";
 import Papa from "npm:papaparse@5.4.1";
-import * as XLSX from "npm:xlsx@0.18.5";
+import * as XLSX from "https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET");
 
 const MAX_ROWS = 1_000_000;
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const CHUNK_SIZE = 500;
 const CONCURRENCY = 8;
 
@@ -211,6 +212,9 @@ async function run(datasetId: string): Promise<{ status: number; body: unknown }
     if (dlError || !fileBuffer) throw new Error(`Could not download file: ${dlError?.message ?? "unknown"}`);
 
     const buffer = new Uint8Array(await fileBuffer.arrayBuffer());
+    if (buffer.byteLength > MAX_FILE_SIZE) {
+      throw new Error("File exceeds the 25 MB size limit");
+    }
     const lowerName = dataset.original_filename.toLowerCase();
     const parsed = lowerName.endsWith(".csv")
       ? parseCsv(buffer)

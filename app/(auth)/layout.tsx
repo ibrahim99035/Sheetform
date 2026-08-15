@@ -17,7 +17,7 @@ export default function AuthLayout({
       </div>
       <div className="relative w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
-          <Link href="/" aria-label="Sheetform home">
+          <Link href="/" aria-label="SiroQ home">
             <Logo />
           </Link>
           <p className="mt-2 text-sm text-muted">CSV &amp; Excel analytics</p>

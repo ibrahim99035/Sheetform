@@ -1,5 +1,5 @@
 -- ============================================================
--- Sheetform schema
+-- SiroQ schema
 -- Tables, helper functions, RPCs, RLS, storage, realtime
 -- ============================================================
 

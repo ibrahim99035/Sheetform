@@ -1,0 +1,5 @@
+date,transaction_id,product,category,qty,unit_price,cost,refund
+2026-01-05,T1,Paracetamol,Analgesic,2,5.00,1.00,0
+2026-01-05,T1,Ibuprofen,Analgesic,1,8.00,2.00,0
+2026-01-20,T2,Vitamin C,Supplement,3,4.00,1.50,0
+2026-02-02,T3,Zinc,Supplement,2,6.00,2.00,0

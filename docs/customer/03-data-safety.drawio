@@ -1,0 +1,61 @@
+<mxfile host="app.diagrams.net" agent="opencode" version="24.7.8" type="device">
+  <diagram id="safety" name="Your data is safe">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="760" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Your pharmacies' data — safe, separate, and on the record" style="text;html=1;fontSize=22;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="300" y="10" width="900" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="boxA" value="Privacy from the start" style="swimlane;startSize=34;fillColor=#fce4ec;strokeColor=#e27396;html=1;fontSize=15;fontStyle=1;rounded=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="460" height="600" as="geometry" />
+        </mxCell>
+        <mxCell id="pa1" value="Each pharmacy can only see its own data and reports" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#e27396;fontSize=14;verticalAlign=middle;" vertex="1" parent="boxA">
+          <mxGeometry x="30" y="50" width="400" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="pa2" value="Access by account + password on every device" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#e27396;fontSize=14;verticalAlign=middle;" vertex="1" parent="boxA">
+          <mxGeometry x="30" y="140" width="400" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="pa3" value="Associations and pharmacies kept fully isolated" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#e27396;fontSize=14;verticalAlign=middle;" vertex="1" parent="boxA">
+          <mxGeometry x="30" y="230" width="400" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="pa4" value="Sensitive data (finance, health-adjacent) handled with extra care" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ffb0c4;fontSize=14;verticalAlign=middle;fontStyle=0;" vertex="1" parent="boxA">
+          <mxGeometry x="30" y="320" width="400" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="boxB" value="You stay in control" style="swimlane;startSize=34;fillColor=#e8f4f8;strokeColor=#5a9bc7;html=1;fontSize=15;fontStyle=1;rounded=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="520" y="80" width="460" height="600" as="geometry" />
+        </mxCell>
+        <mxCell id="pb1" value="A pharmacy can request a copy of its data — you can fulfil it easily" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#5a9bc7;fontSize=14;verticalAlign=middle;" vertex="1" parent="boxB">
+          <mxGeometry x="30" y="50" width="400" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="pb2" value="A pharmacy can request deletion — the system supports it" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#5a9bc7;fontSize=14;verticalAlign=middle;" vertex="1" parent="boxB">
+          <mxGeometry x="30" y="140" width="400" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="pb3" value="Data is kept only as long as needed, then removed automatically" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#5a9bc7;fontSize=14;verticalAlign=middle;" vertex="1" parent="boxB">
+          <mxGeometry x="30" y="230" width="400" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="pb4" value="You set and enforce the rules your service needs (Terms)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#8dbad8;fontSize=14;verticalAlign=middle;" vertex="1" parent="boxB">
+          <mxGeometry x="30" y="320" width="400" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="boxC" value="On the record" style="swimlane;startSize=34;fillColor=#e8f5e9;strokeColor=#59a767;html=1;fontSize=15;fontStyle=1;rounded=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="80" width="460" height="600" as="geometry" />
+        </mxCell>
+        <mxCell id="pc1" value="Every important action is recorded automatically" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#59a767;fontSize=14;verticalAlign=middle;" vertex="1" parent="boxC">
+          <mxGeometry x="30" y="50" width="400" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="pc2" value="Who changed what, and when — a permanent journal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#59a767;fontSize=14;verticalAlign=middle;" vertex="1" parent="boxC">
+          <mxGeometry x="30" y="140" width="400" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="pc3" value="The journal can never be erased — protection for you and them" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#59a767;fontSize=14;verticalAlign=middle;" vertex="1" parent="boxC">
+          <mxGeometry x="30" y="230" width="400" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="pc4" value="A reliable service you can stand behind" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#8fbe9a;fontSize=14;verticalAlign=middle;" vertex="1" parent="boxC">
+          <mxGeometry x="30" y="320" width="400" height="70" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

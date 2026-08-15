@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sheetform",
+  title: "SiroQ",
   description: "Upload, analyze, and transform CSV/Excel files.",
 };
 

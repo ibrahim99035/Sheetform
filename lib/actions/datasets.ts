@@ -1,10 +1,11 @@
 "use server";
 
-import { STORAGE_BUCKET } from "@/lib/constants";
+import { STORAGE_BUCKET, MAX_FILE_SIZE } from "@/lib/constants";
 import { makeUniqueKeys } from "@/lib/coerce";
 import { inspectFile } from "@/lib/inspect";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { log } from "@/lib/log";
 import type { ColumnDef, ColumnType } from "@/lib/types";
 
 export interface CreateDatasetInput {
@@ -49,6 +50,11 @@ export async function createDataset(
   }
 
   const buffer = new Uint8Array(await fileBuffer.arrayBuffer());
+
+  if (buffer.byteLength > MAX_FILE_SIZE) {
+    return { ok: false, error: "The file exceeds the 25 MB size limit." };
+  }
+
   const inspected = inspectFile(buffer, input.fileName);
 
   let header: string[];
@@ -100,4 +106,67 @@ export async function createDataset(
   }
 
   return { ok: true, datasetId: dataset.id };
+}
+
+export type RetryImportResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Operator-only recovery for a stuck/failed import.
+ *
+ * 1. `retry_import` (superadmin-guarded RPC) flips the dataset back to
+ *    `pending` so the ingest run is eligible again.
+ * 2. We re-invoke the Edge Function (same guard the DB webhook uses) so no
+ *    webhook is needed for the retry.
+ */
+export async function retryImport(datasetId: string): Promise<RetryImportResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const admin = createAdminClient();
+
+  const { error: rpcError } = await admin.rpc("retry_import", {
+    p_dataset_id: datasetId,
+  });
+  if (rpcError) {
+    log.warn("retry_import rejected", { datasetId, error: rpcError.message });
+    return { ok: false, error: rpcError.message };
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!baseUrl) return { ok: false, error: "Supabase URL is not configured." };
+
+  try {
+    const res = await fetch(`${baseUrl}/functions/v1/import-dataset`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.WEBHOOK_SECRET
+          ? { "x-supabase-webhook-secret": process.env.WEBHOOK_SECRET }
+          : {}),
+      },
+      body: JSON.stringify({ dataset_id: datasetId }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      log.warn("import re-invocation failed", {
+        datasetId,
+        status: res.status,
+        body: text.slice(0, 200),
+      });
+      return { ok: false, error: `Re-invocation failed (HTTP ${res.status}).` };
+    }
+  } catch (err) {
+    log.error("import re-invocation threw", {
+      datasetId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  log.info("import re-invoked", { datasetId });
+  return { ok: true };
 }

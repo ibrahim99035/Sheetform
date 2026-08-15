@@ -21,7 +21,7 @@ export default async function AdminPage() {
       <div>
         <h1 className="text-xl font-semibold text-foreground">Admin</h1>
         <p className="mt-0.5 text-sm text-muted">
-          Every Sheetform user and their files.
+          Every SiroQ user and their files.
         </p>
       </div>
       <AdminUsers users={users} currentUserId={user.id} />

@@ -1,6 +1,6 @@
 import { LoginForm } from "./login-form";
 
-export const metadata = { title: "Sign in · Sheetform" };
+export const metadata = { title: "Sign in · SiroQ" };
 
 export default function LoginPage() {
   return (

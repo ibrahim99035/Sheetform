@@ -35,7 +35,7 @@ export default async function HomePage() {
   return (
     <main className="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-background px-6 py-20 text-center">
       <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-5 py-4 sm:px-8">
-        <Link href="/" aria-label="Sheetform">
+        <Link href="/" aria-label="SiroQ">
           <Logo />
         </Link>
         <ThemeToggle />

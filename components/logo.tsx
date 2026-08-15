@@ -9,7 +9,7 @@ export function Logo({ className, iconOnly = false }: { className?: string; icon
       </span>
       {!iconOnly && (
         <span className="hidden min-[360px]:inline text-[15px] font-semibold tracking-tight text-foreground">
-          Sheetform
+          SiroQ
         </span>
       )}
     </span>

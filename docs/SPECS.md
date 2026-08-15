@@ -1,4 +1,4 @@
-# Sheetform — Product Specs
+# SiroQ — Product Specs
 
 > CSV / Excel analytics platform. Upload a spreadsheet, preview and edit it in a
 > virtualized table, run transforms with full undo/redo, explore aggregated
@@ -17,7 +17,7 @@
 | Files | `xlsx`, `papaparse` (client-side parse on upload) |
 | Backend | Supabase: Postgres + Auth (email/password) + Storage + Realtime + DB webhook → Edge Function |
 | Language | TypeScript (strict) |
-| Deployment | Vercel (`https://sheetform-eight.vercel.app/`) |
+| Deployment | Vercel (`https://siroq.vercel.app/`) |
 
 ## Product features
 
@@ -81,6 +81,8 @@ Storage: private bucket `uploads`, object path `{owner_id}/...`.
   operation, so admin edits are attributable.
 - The only explicit app-level ownership check is the export route
   (`app/api/datasets/[id]/export/route.ts`), which now also permits admins.
+- Policy details (trust model, retention, DSR, incident response) live in
+  [`SECURITY.md`](../SECURITY.md) — kept in sync with compliance changes.
 
 ## Key DB functions (RPCs, SECURITY INVOKER unless noted)
 
@@ -99,6 +101,8 @@ Storage: private bucket `uploads`, object path `{owner_id}/...`.
 | `undo_operation(dataset)` / `redo_operation(dataset)` | replay inverses/operations |
 | `is_superadmin()` | **SECURITY DEFINER** role check |
 | `admin_list_users()` / `admin_list_datasets(uid)` | **SECURITY DEFINER** admin queries |
+| `append_audit(action, entity_type, entity_id, metadata, org_id)` | **SECURITY DEFINER** append-only audit write (actor = `auth.uid()`) |
+| `retry_import(dataset_id)` | **SECURITY DEFINER** superadmin-only; resets stuck/failed dataset to `pending` |
 
 ## Migrations
 
@@ -106,6 +110,20 @@ Storage: private bucket `uploads`, object path `{owner_id}/...`.
 | --- | --- |
 | `20260810180000_init.sql` | tables, storage bucket + policies, helper/read/analyze/transform functions, grants, RLS, realtime publication |
 | `20260811120000_admin.sql` | `admin_users`, `is_superadmin()`, `or is_superadmin()` on all owner/storage policies, `admin_list_users` / `admin_list_datasets` |
+| `20260814120000_org_model.sql` | organization model: branches (pharmacies), members, applications, reports + access-gated items; dataset RLS cutover to superadmin-only |
+| `20260814130000_org_fix.sql` | branch-delete protection via RLS (allows org cascade deletes) |
+| `20260814140000_op_timeout.sql` / `20260814150400_op_timeout_role.sql` | mutation RPC timeout handling (final: role-level `statement_timeout` for authenticated) |
+| `20260815100000_hardening.sql` | append-only `audit_log` + triggers, `append_audit`, `retry_import` |
+| `20260815200000_org_workflow.sql` | `templates`/`template_columns` (4 seeded: sales, product, financial, health) + role mapping, `branches.status` lifecycle, `branch_profiles` + licensing, extended `submit_application` (template + branch gate), `notifications` + `notify_user` + triggers |
+| `20260815210000_branch_updated_at.sql` | add `branches.updated_at` (referenced by branch lifecycle RPCs) |
+| `20260815300000_analysis.sql` | KPI engine: `_sf_to_num`/`_sf_to_ts` guarded casts, `_sf_template_key_map`, `dataset_kpis`, `time_series`, `compare_periods`, `association_rollup`, `snapshot_report_kpis` |
+| `20260815310000_analysis_fix.sql` / `...333000_compare_v2.sql` | `compare_periods` v2: latest-vs-previous bucket via `time_series` (aliased inner columns) |
+| `20260815320000_kpis_v2.sql` | `dataset_kpis` fix: `v_exp` (key text) vs `v_expense` (numeric accumulator) type clash; `- refund` in sales revenue |
+| `20260815340000_rollup_snapshot_fix.sql` | resolve datasets→org through `application_files`/`applications` (no `datasets.organization_id`); drop `max(uuid)` misuse in `snapshot_report_kpis` |
+| `20260815350000_snapshot_filter_fix.sql` | `snapshot_report_kpis` filters on `datasets.status='ready'` (not `deleted_at`) |
+| `20260815400000_deliveries.sql` | delivery queue: `deliveries` table + RLS, `queue_report_deliveries(report, kind)`, `retry_deliveries(report)` (status machine `queued → processing → delivered|failed|skipped`) |
+| `20260815410000_queue_ok_boolean.sql` | `queue_report_deliveries` fix: `v_org_status` must be `bool` (was `text`), so `if not v_org_status` compiles |
+| `20260815500000_compliance.sql` | compliance: `retention_policies` (seeded 0/36/72 mo) + `_sf_retention_months`/`_sf_purge_eligible`, `archive_dataset`/`purge_dataset`/`purge_expired` (soft→hard, audit-backed, storage delete via `storage.allow_delete_query`), `subject_requests` + `request_subject_action`/`process_subject_request` (export/delete DSR), `terms`/`terms_acceptances` + `current_terms`/`terms_pending`/`accept_terms`; datasets gain `purged` status; guarded pg_cron `siroq-retention-sweep` |
 
 > Note: `auth.users.email` is typed `varchar`, so the users RPC casts it
 > (`email::text`) to satisfy PL/pgSQL `return query` type matching.
@@ -131,6 +149,12 @@ Storage: private bucket `uploads`, object path `{owner_id}/...`.
 | `scripts/create-webhook.mjs` | Register the DB webhook → `import-dataset` Edge Function |
 | `scripts/e2e-smoke.mjs` | Import-pipeline smoke test (upload → pending → ready, print rows/stats) |
 | `scripts/e2e-cleanup.mjs` | Clean up E2E datasets/users |
+| `scripts/e2e-org.mjs` | Org-model e2e (create_owner → approve → pharmacist → submit → publish → RLS gating) |
+| `scripts/e2e-analysis.mjs` | Phase-3 KPI e2e (branch licensing → sales-template submit → `dataset_kpis`/`time_series`/`compare_periods`/`association_rollup`/`snapshot_report_kpis` against `test/fixtures/sales.csv`) |
+| `scripts/e2e-deliveries.mjs` | Phase-4 delivery-queue e2e (queue → worker dry-run → delivered, no-provider fail path, retry, RLS). Invokes `scripts/deliver-reports.mjs` in-process |
+| `scripts/deliver-reports.mjs` | Local/CI mirror of the `deliver-reports` Edge Function: claims queued deliveries, renders KPI body, sends via Resend / Meta WhatsApp (or dry-runs when `DRY_RUN=1`, the default) |
+| `scripts/e2e-compliance.mjs` | Phase-5 compliance e2e (retention_policies seed/RLS, `_sf_retention_months`/purge eligibility, archive→purge soft/hard, `purge_expired` dry+real sweep, DSR export/delete/reject + RLS, terms accept idempotence) |
+| `scripts/e2e-reports.mjs` | Reports-workflow e2e (operator publish → RLS read side → snapshot KPIs → queue/retry deliveries → revise; non-superadmin FORBIDDEN asserted on every operator RPC) |
 
 ## Environment
 
@@ -138,6 +162,14 @@ Storage: private bucket `uploads`, object path `{owner_id}/...`.
 `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
 `NEXT_PUBLIC_SITE_URL`. Local `.env.local` (gitignored) mirrors this;
 Vercel has its own env set.
+
+## Production hardening (v0.2)
+
+- **Audit (append-only)** — `audit_log(id, actor_id, organization_id, action, entity_type, entity_id, metadata, created_at)`. No update/delete grants for authenticated users; writes go through SECURITY DEFINER `append_audit` (actor is always `auth.uid()`). Triggers record dataset/application status changes, report publishes/revocations/revisions, org-profile reviews; the export route audits success. Readable by superadmins and members of the related org.
+- **Observability** — `instrumentation.ts` (native Next 16 hook) initializes Sentry when `SENTRY_DSN` is set and forwards every server request error via `onRequestError`. `lib/log.ts` emits structured JSON lines with a per-request `requestId` (set in `proxy.ts`, surfaced as `x-request-id`).
+- **Import recovery** — datasets stuck in `pending`/`error` are re-driven by the operator via **Retry import** in the workspace: `retry_import` (superadmin-only RPC) flips the dataset to `pending`, then the server action re-invokes the Edge Function with `WEBHOOK_SECRET`.
+- **Limits (enforced at every gate)** — ≤ 1,000,000 data rows and ≤ 25 MB per upload (client dropzone, server action, Edge Function).
+- **CI** — `.github/workflows/ci.yml` runs lint, typecheck, unit tests, and a production build on every PR; merge is blocked on red CI. Staging uses a separate Supabase project (`.env.staging.example`, `docs/OPS.md`).
 
 ## Mobile testing matrix
 
@@ -175,6 +207,17 @@ reshape it.
   concepts until the meeting clarifies the model.
 
 ## Roadmap
+
+- **Phase 5 (done):** compliance — classification (template sensitivity →
+  dataset), retention (`retention_policies` + `archive/purge` + weekly sweep),
+  DSR (export/delete), terms acceptance, `SECURITY.md`, `scripts/e2e-compliance.mjs`.
+- **Phase 5.5 (done):** reports UI — operator `Reports` module
+  (`app/(app)/reports`: list + `new` composer + `[id]` viewer + `[id]/edit`
+  revise; `lib/reports.ts` + `lib/actions/reports.ts` + `components/reports/*`),
+  pharmacy-facing read side via existing `effective_report_access` RLS,
+  `scripts/e2e-reports.mjs`.
+- **Phase 6 (next):** scale — KPI lookups via `_sf_template_key_map` only (no
+  hardcoded storage keys), performance indexes, pagination, op-log pruning.
 
 - **Phase 7 (planned, NOT implemented):** installable PWA — `manifest.ts` +
   icons + service worker; free push notifications later via Web Push/VAPID

@@ -1,0 +1,44 @@
+# SiroQ — customer-facing package
+
+Materials for the customer conversation (non-technical). All files are plain
+and jargon-free.
+
+> **Framing:** the customer is the **operator / association** who demands the
+> SaaS and runs a data-advisory service for their **client pharmacies** — the
+> pharmacists are the end beneficiaries, not the buyer. Everything below speaks
+> to the buyer: "here is a system you operate to serve your pharmacies at scale."
+
+## Files
+
+| File | What it is |
+| --- | --- |
+| `01-overview.drawio` | Diagram — **SiroQ at a glance**: your pharmacies → you (operator) → back to your pharmacies. |
+| `01-overview.md` | Explanation — what the buyer gets and who is on which side of the deal. |
+| `02-workflow.drawio` | Diagram — **How it works**: the monthly rhythm (7 numbered steps). |
+| `02-workflow.md` | Explanation — the steps, who does what (pharmacy / SiroQ / operator). |
+| `03-data-safety.drawio` | Diagram — **Privacy / Control / On the record** promise. |
+| `03-data-safety.md` | Explanation — how the pharmacies' data is kept private and safe. |
+| `README.md` | This index + presentation guide. |
+
+## How to present it
+
+1. Start with the overview (`01-overview.drawio`) — set the frame: "This is a
+   system *you* run to deliver monthly data advice to *your* pharmacies."
+2. Walk the workflow (`02-workflow.drawio`) — emphasize how little effort each
+   monthly cycle takes for the operator (steps 2, 3, 5, 6 are automatic), and
+   that the buyer adds value at step 4.
+3. Close with data safety (`03-data-safety.drawio`) — the trust argument: your
+   pharmacies' data is separate, governed by rules you control, and on the record.
+4. Refer to the matching `.md` for talking points; the diagrams alone carry the
+   conversation.
+
+## Notes for this meeting
+
+- This is a **customer-facing** summary; technical detail lives in
+  `../SPECS.md` and `../OPS.md`.
+- The system is fully built end-to-end; nothing here promises features that do
+  not exist.
+- The purchaser is the operator; if asked "who benefits?", the honest answer is:
+  the pharmacies benefit from the advice, and you benefit by owning and running
+  a scalable service they pay for.
+- Open the `.drawio` files in draw.io to edit (https://app.diagrams.net).

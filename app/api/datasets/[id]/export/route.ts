@@ -24,6 +24,23 @@ async function signedOriginalUrl(user: { id: string }, datasetId: string) {
   return data?.signedUrl ?? null;
 }
 
+async function auditExport(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  datasetId: string,
+  format: string,
+): Promise<void> {
+  try {
+    await supabase.rpc("append_audit", {
+      p_action: "export",
+      p_entity_type: "datasets",
+      p_entity_id: datasetId,
+      p_metadata: { format },
+    });
+  } catch {
+    // Auditing must never break the export itself.
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -43,6 +60,7 @@ export async function GET(
   if (format === "original") {
     const signed = await signedOriginalUrl(user, id);
     if (!signed) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    await auditExport(supabase, id, format);
     return new NextResponse("", {
       status: 302,
       headers: { Location: signed },
@@ -65,6 +83,8 @@ export async function GET(
     .single();
 
   if (!dataset) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  await auditExport(supabase, id, format);
 
   const columns = (dataset.column_defs ?? []) as Dataset["column_defs"];
   const pageSize = 5000;

@@ -11,6 +11,7 @@ import {
   Loader2,
   PencilLine,
   Plus,
+  RefreshCcw,
   RotateCcw,
   RotateCw,
   Table2,
@@ -24,6 +25,7 @@ import { AnalyzeTab } from "@/components/analyze-tab";
 import { ActivityTab } from "@/components/activity-tab";
 import { StatusBadge } from "@/components/status-badge";
 import { applyOperation, redoOperation, undoOperation } from "@/lib/dataset-api";
+import { retryImport } from "@/lib/actions/datasets";
 import { makeStorageKey, coerceValue } from "@/lib/coerce";
 import { viewSignature } from "@/lib/view";
 import { useToast } from "@/components/ui/toast";
@@ -73,6 +75,7 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
   const [tab, setTab] = useState<Tab>("data");
   const [view, setView] = useState<ViewState>({ sort: null, filters: [] });
   const [busyOp, setBusyOp] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   const columns = ds.column_defs;
   const activeFilters = view.filters.length > 0;
@@ -147,6 +150,23 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
   useEffect(() => {
     handleUndoRef.current = handleUndo;
   }, [handleUndo]);
+
+  const handleRetryImport = useCallback(async () => {
+    setRetrying(true);
+    const res = await retryImport(ds.id);
+    setRetrying(false);
+    if (!res.ok) {
+      toast({ kind: "error", text: res.error ?? "Could not retry the import." });
+      return;
+    }
+    setDs((prev) => ({
+      ...prev,
+      status: "pending",
+      error_message: null,
+      updated_at: new Date().toISOString(),
+    }));
+    toast({ text: "Import restarted — the table will update when it finishes." });
+  }, [ds.id, toast]);
 
   const runOp = useCallback(
     async (operation: string, params: Record<string, unknown>, okMessage?: string) => {
@@ -335,27 +355,50 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
 
       {/* Status banners */}
       {ds.status === "error" && (
-        <div className="flex items-start gap-3 rounded-xl border border-danger/25 bg-danger-subtle px-4 py-3 text-sm text-danger-text">
-          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <div>
-            <p className="font-medium">Import failed</p>
-            <p className="mt-0.5">{ds.error_message}</p>
+        <div className="flex items-start justify-between gap-3 rounded-xl border border-danger/25 bg-danger-subtle px-4 py-3 text-sm text-danger-text">
+          <div className="flex items-start gap-3">
+            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-medium">Import failed</p>
+              <p className="mt-0.5">{ds.error_message}</p>
+            </div>
           </div>
+          <Button
+            size="sm"
+            onClick={handleRetryImport}
+            disabled={retrying}
+            title="Restart the import pipeline for this file"
+          >
+            <RefreshCcw className={`h-3.5 w-3.5 ${retrying ? "animate-spin" : ""}`} />
+            Retry import
+          </Button>
         </div>
       )}
       {importing && (
-        <div className="flex items-center gap-3 rounded-xl border border-warning/25 bg-warning-subtle px-4 py-3 text-sm text-warning-text">
-          <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-          <div>
-            <p className="font-medium">
-              Import is {ds.status} — the table will appear when it finishes.
-            </p>
-            {ds.status === "pending" && (
-              <p className="mt-0.5 text-warning-text/80">
-                The import hasn’t started yet. If it stays pending, try re-uploading.
+        <div className="flex items-start justify-between gap-3 rounded-xl border border-warning/25 bg-warning-subtle px-4 py-3 text-sm text-warning-text">
+          <div className="flex items-start gap-3">
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+            <div>
+              <p className="font-medium">
+                Import is {ds.status} — the table will appear when it finishes.
               </p>
-            )}
+              {ds.status === "pending" && (
+                <p className="mt-0.5 text-warning-text/80">
+                  The import hasn’t started yet. If it stays pending, retry it.
+                </p>
+              )}
+            </div>
           </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleRetryImport}
+            disabled={retrying}
+            title="Restart the import pipeline for this file"
+          >
+            <RefreshCcw className={`h-3.5 w-3.5 ${retrying ? "animate-spin" : ""}`} />
+            Retry
+          </Button>
         </div>
       )}
 

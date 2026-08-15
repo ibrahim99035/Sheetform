@@ -1,0 +1,82 @@
+<mxfile host="app.diagrams.net" agent="opencode" version="24.7.8" type="device">
+  <diagram id="workflow" name="How it works">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1150" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="How SiroQ works — the monthly rhythm of your service" style="text;html=1;fontSize=22;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="300" y="10" width="800" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s1" value="1.  A pharmacy sends you its data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce4ec;strokeColor=#e27396;fontSize=15;fontStyle=1;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="550" y="80" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s1note" value="No retyping for anyone — they send the Excel/CSV files they already keep, month by month." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#f3b8ca;fontSize=13;verticalAlign=middle;align=center;" vertex="1" parent="1">
+          <mxGeometry x="100" y="80" width="380" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s2" value="2.  SiroQ checks and imports it" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f4f8;strokeColor=#5a9bc7;fontSize=15;fontStyle=1;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="550" y="200" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s2note" value="Columns and types are recognized automatically. The file is stored privately, per pharmacy." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b9d7ec;fontSize=13;verticalAlign=middle;align=center;" vertex="1" parent="1">
+          <mxGeometry x="100" y="200" width="380" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s3" value="3.  SiroQ analyzes the numbers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f4f8;strokeColor=#5a9bc7;fontSize=15;fontStyle=1;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="550" y="320" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s3note" value="Sales totals, quantities, costs, margins — for each pharmacy, and compared over time." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b9d7ec;fontSize=13;verticalAlign=middle;align=center;" vertex="1" parent="1">
+          <mxGeometry x="100" y="320" width="380" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s4" value="4.  You review and publish advice" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f4f8;strokeColor=#5a9bc7;fontSize=15;fontStyle=1;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="550" y="440" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s4note" value="A readable report per pharmacy, ready for you to review and approve — minimal effort." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b9d7ec;fontSize=13;verticalAlign=middle;align=center;" vertex="1" parent="1">
+          <mxGeometry x="100" y="440" width="380" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s5" value="5.  You publish the report" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f4f8;strokeColor=#5a9bc7;fontSize=15;fontStyle=1;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="550" y="560" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s5note" value="It lives in the pharmacy's account, safe and always reachable, with a full history." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b9d7ec;fontSize=13;verticalAlign=middle;align=center;" vertex="1" parent="1">
+          <mxGeometry x="100" y="560" width="380" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s6" value="6.  It reaches the pharmacy its way" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#59a767;fontSize=15;fontStyle=1;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="550" y="680" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s6note" value="Automatic delivery by email and/or WhatsApp — whichever each pharmacy prefers." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#acd6b5;fontSize=13;verticalAlign=middle;align=center;" vertex="1" parent="1">
+          <mxGeometry x="100" y="680" width="380" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="s7" value="7.  They act — you grow the service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#59a767;fontSize=15;fontStyle=1;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="550" y="800" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s7note" value="The pharmacy makes better decisions; you keep a clean record of the value you deliver." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#acd6b5;fontSize=13;verticalAlign=middle;align=center;" vertex="1" parent="1">
+          <mxGeometry x="100" y="800" width="380" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend" value="Legend" style="text;html=1;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="940" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1" value="The pharmacy (your client)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce4ec;strokeColor=#e27396;fontSize=12;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="100" y="965" width="170" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="lg2" value="SiroQ + you, the operator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f4f8;strokeColor=#5a9bc7;fontSize=12;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="100" y="1010" width="170" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="lg3" value="Result / delivery" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#59a767;fontSize=12;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="100" y="1055" width="170" height="34" as="geometry" />
+        </mxCell>
+
+        <mxCell id="w1" edge="1" parent="1" source="s1" target="s2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#888888;strokeWidth=2;endArrow=classic;"></mxCell>
+        <mxCell id="w2" edge="1" parent="1" source="s2" target="s3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#888888;strokeWidth=2;endArrow=classic;"></mxCell>
+        <mxCell id="w3" edge="1" parent="1" source="s3" target="s4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#888888;strokeWidth=2;endArrow=classic;"></mxCell>
+        <mxCell id="w4" edge="1" parent="1" source="s4" target="s5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#888888;strokeWidth=2;endArrow=classic;"></mxCell>
+        <mxCell id="w5" edge="1" parent="1" source="s5" target="s6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#888888;strokeWidth=2;endArrow=classic;"></mxCell>
+        <mxCell id="w6" edge="1" parent="1" source="s6" target="s7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#888888;strokeWidth=2;endArrow=classic;"></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

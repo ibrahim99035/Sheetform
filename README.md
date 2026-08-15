@@ -1,11 +1,15 @@
-# Sheetform
+# SiroQ
 
-A CSV / Excel analytics platform built with **Next.js 16** and **Supabase**.
-Upload a spreadsheet, preview and edit it in a fast virtualized table, apply
-transforms with full undo/redo, explore grouped analytics, and export the
-result — all with a polished light/dark UI that works down to 320px screens.
+A managed data-advisory platform for **pharmacies and pharmacy associations**,
+built with **Next.js 16** and **Supabase**. Pharmacies submit their data
+through a guided upload flow; the SiroQ operator analyzes each submission
+(stats, group-by aggregations, transforms with full undo/redo) and publishes
+advice as reports that pharmacies can view and download. The underlying
+spreadsheet engine still supports fast virtualized browsing, inline editing,
+and CSV/XLSX export — with a polished light/dark UI that works down to 320px
+screens.
 
-Live at **[https://sheetform-eight.vercel.app/](https://sheetform-eight.vercel.app/)**.
+Live at **[https://siroq.vercel.app/](https://siroq.vercel.app/)**.
 
 ## Features
 
@@ -45,6 +49,8 @@ Copy `.env.example` to `.env.local` and fill in your Supabase project keys:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon (client) key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service-role key (server scripts only) |
 | `NEXT_PUBLIC_SITE_URL` | Base URL (`http://localhost:3000` locally) |
+| `SENTRY_DSN` | (optional) Sentry server error reporting |
+| `WEBHOOK_SECRET` | Import Edge Function guard (required for Retry import) |
 
 ### Setting up the database
 
@@ -76,12 +82,14 @@ self-grant.
 | `scripts/add-admin.mjs` | Grant/revoke superadmin |
 | `scripts/create-webhook.mjs` | Wire the import DB webhook |
 | `scripts/e2e-smoke.mjs` / `e2e-cleanup.mjs` | Import-pipeline smoke test / cleanup |
+| `scripts/e2e-org.mjs` | Organization-model smoke test (owner → profile → approval → pharmacists → applications → reports, RLS gating assertions) |
 
 ## Development
 
 ```bash
-npm run lint    # eslint
-npm run build   # production build (+ typecheck)
+npm run check     # lint + typecheck + unit tests
+npm run lint      # eslint
+npm run build     # production build (+ typecheck)
 ```
 
 ## Documentation

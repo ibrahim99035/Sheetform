@@ -16,12 +16,14 @@ export interface BadgeProps {
   variant?: Variant;
   dot?: "solid" | "pulse";
   className?: string;
+  title?: string;
   children: ReactNode;
 }
 
-export function Badge({ variant = "neutral", dot, className, children }: BadgeProps) {
+export function Badge({ variant = "neutral", dot, className, title, children }: BadgeProps) {
   return (
     <span
+      title={title}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
         VARIANTS[variant],

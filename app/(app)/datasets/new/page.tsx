@@ -1,6 +1,6 @@
 import { UploadFlow } from "@/components/upload-flow";
 
-export const metadata = { title: "New dataset · Sheetform" };
+export const metadata = { title: "New dataset · SiroQ" };
 
 export default function NewDatasetPage() {
   return (

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogOut, Plus, ShieldCheck } from "lucide-react";
+import { FileText, FolderOpen, LogOut, Plus, ShieldCheck } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/admin";
@@ -24,7 +24,7 @@ export default async function AppLayout({
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-5">
-            <Link href="/datasets" aria-label="Sheetform home">
+            <Link href="/datasets" aria-label="SiroQ home">
               <Logo />
             </Link>
             <nav className="flex items-center gap-1 text-sm">
@@ -33,6 +33,20 @@ export default async function AppLayout({
                 className="rounded-md px-3 py-2 text-muted transition hover:bg-surface-subtle hover:text-foreground sm:py-1.5"
               >
                 Datasets
+              </Link>
+              <Link
+                href="/reports"
+                className="rounded-md px-3 py-2 text-muted transition hover:bg-surface-subtle hover:text-foreground sm:py-1.5"
+              >
+                <FileText className="mr-1 inline h-3.5 w-3.5 sm:hidden" />
+                Reports
+              </Link>
+              <Link
+                href="/applications"
+                className="rounded-md px-3 py-2 text-muted transition hover:bg-surface-subtle hover:text-foreground sm:py-1.5"
+              >
+                <FolderOpen className="mr-1 inline h-3.5 w-3.5 sm:hidden" />
+                Applications
               </Link>
               <Link
                 href="/datasets/new"

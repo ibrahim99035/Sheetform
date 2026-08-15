@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { UploadCloud } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { MAX_FILE_SIZE } from "@/lib/constants";
 
 interface FileDropzoneProps {
   onFile: (file: File) => void;
@@ -22,6 +23,10 @@ export function FileDropzone({ onFile, disabled, accepted = ".csv,.xlsx,.xls" }:
       const okExt = /\.(csv|xlsx|xls)$/i.test(file.name);
       if (!okExt) {
         setError("Unsupported file type. Please upload a .csv or .xlsx file.");
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        setError("This file exceeds the 25 MB size limit.");
         return;
       }
       setError(null);

@@ -80,7 +80,12 @@ export function UploadFlow() {
         storagePath: objectPath,
         fileName: file.name,
         sheetName: activeSheet.name,
-        columns: columns.map((c) => ({ label: c.label, type: c.type })),
+        columns: columns.map((c) => ({
+          label: c.label,
+          type: c.type,
+          role: c.role,
+          role_confidence: c.role_confidence,
+        })),
       });
 
       if (!result.ok) throw new Error(result.error);

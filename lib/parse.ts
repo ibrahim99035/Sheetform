@@ -2,7 +2,8 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { PREVIEW_ROWS } from "./constants";
 import { inferType, makeUniqueKeys } from "./coerce";
-import type { InferredColumn, ColumnType } from "./types";
+import { inferRoles, type ColumnSample } from "./analysis/roles";
+import type { InferredColumn, ColumnType, ColumnDef } from "./types";
 
 export interface PreviewSheet {
   name: string;
@@ -29,7 +30,7 @@ function inferColumns(headers: string[], sampleRows: string[][]): InferredColumn
   const keys = makeUniqueKeys(headers);
   const columnCount = headers.length;
 
-  return Array.from({ length: columnCount }, (_, colIndex) => {
+  const base: ColumnDef[] = Array.from({ length: columnCount }, (_, colIndex) => {
     const values = sampleRows.map((row) => row[colIndex]);
     const type: ColumnType = inferType(values);
     return {
@@ -37,6 +38,31 @@ function inferColumns(headers: string[], sampleRows: string[][]): InferredColumn
       label: headers[colIndex],
       type,
     };
+  });
+
+  // stub samples for role inference over the preview window
+  const samples: Record<string, ColumnSample> = {};
+  for (let colIndex = 0; colIndex < columnCount; colIndex++) {
+    const values = sampleRows.map((row) => row[colIndex] ?? null);
+    const nonNull = values.filter((v): v is string => Boolean(v));
+    samples[keys[colIndex]] = {
+      type: base[colIndex].type,
+      values,
+      distinct: new Set(nonNull).size || 1,
+      nonNullCount: nonNull.length,
+      totalRows: sampleRows.length,
+      colIndex,
+    };
+  }
+
+  const assignments = inferRoles(base, samples);
+  const byKey = new Map(assignments.map((a) => [a.key, a]));
+
+  return base.map((c) => {
+    const a = byKey.get(c.key);
+    return a
+      ? { ...c, role: a.role, role_confidence: a.confidence }
+      : { ...c };
   });
 }
 

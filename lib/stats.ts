@@ -1,4 +1,5 @@
 import type { ColumnDef, ColumnStats } from "./types";
+import { coerceValueDetailed } from "./coerce";
 
 export interface ComputedColumnStats {
   min: number | null;
@@ -7,6 +8,7 @@ export interface ComputedColumnStats {
   sum: number | null;
   distinct_count: number;
   null_count: number;
+  invalid_count: number;
 }
 
 export function computeColumnStats(
@@ -19,6 +21,7 @@ export function computeColumnStats(
     const numericValues: number[] = [];
     const distinct = new Set<string>();
     let nullCount = 0;
+    let invalidCount = 0;
 
     for (const row of rows) {
       const value = row.data[def.key];
@@ -26,9 +29,16 @@ export function computeColumnStats(
         nullCount += 1;
         continue;
       }
-      distinct.add(JSON.stringify(value));
-      if (def.type === "numeric" && typeof value === "number") {
-        numericValues.push(value);
+      const coerced = coerceValueDetailed(def.type, value);
+      if (coerced === null || coerced === undefined) {
+        nullCount += 1;
+        continue;
+      }
+      if (!coerced.valid) invalidCount += 1;
+      if (coerced.value === null) continue;
+      distinct.add(JSON.stringify(coerced.value));
+      if (def.type === "numeric" && typeof coerced.value === "number") {
+        numericValues.push(coerced.value);
       }
     }
 
@@ -50,6 +60,7 @@ export function computeColumnStats(
       sum,
       distinct_count: distinct.size,
       null_count: nullCount,
+      invalid_count: invalidCount,
     };
   }
 
@@ -69,5 +80,6 @@ export function toStatsRows(
     sum: s.sum,
     distinct_count: s.distinct_count,
     null_count: s.null_count,
+    invalid_count: s.invalid_count,
   }));
 }

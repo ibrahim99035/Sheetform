@@ -18,6 +18,9 @@ and jargon-free.
 | `02-workflow.md` | Explanation — the steps, who does what (pharmacy / SiroQ / operator). |
 | `03-data-safety.drawio` | Diagram — **Privacy / Control / On the record** promise. |
 | `03-data-safety.md` | Explanation — how the pharmacies' data is kept private and safe. |
+| `04-technical-workflow.drawio` (3 pages) | Diagram — **Technical deep-dive**: ingestion & workspace, analysis engine block producers, report block model + publish + delivery. |
+| `04-technical-workflow.md` | Technical walkthrough 1:1 with the diagram — real tables/functions, live demo proof points, honest pending list, opening questions. |
+| `05-capabilities-brief.md` | Matrix — **Built / Pending / Open terms** for the scope conversation. |
 | `README.md` | This index + presentation guide. |
 
 ## How to present it
@@ -32,7 +35,22 @@ and jargon-free.
 4. Refer to the matching `.md` for talking points; the diagrams alone carry the
    conversation.
 
-## Notes for this meeting
+## Deep-dive track (showcase → scope)
+
+1. Frame that this is a working system, not a mockup: run the 30-second script in
+   `04-technical-workflow.md` §0 live — login, workspace, add a table + chart
+   + engine insight, **Preview report**, publish.
+2. Use `04-technical-workflow.drawio` page-by-page to explain *what you did in
+   the browser and what the system did underneath* (page 1 = upload+ops,
+   page 2 = every analysis becomes a persisted block, page 3 = block model +
+   publish + delivery).
+3. Hand the floor to `05-capabilities-brief.md`: "Here is what runs today, here
+   is what is scoped and planned, here are the open terms." Position the four
+   pending items as scope/timeline levers — never as doubts.
+4. End with the §6 questions in `04-technical-workflow.md` (operator model,
+   monthly cycle size, which blocks are must-haves, delivery channel).
+
+## Notes
 
 - This is a **customer-facing** summary; technical detail lives in
   `../SPECS.md` and `../OPS.md`.
@@ -41,4 +59,6 @@ and jargon-free.
 - The purchaser is the operator; if asked "who benefits?", the honest answer is:
   the pharmacies benefit from the advice, and you benefit by owning and running
   a scalable service they pay for.
+- `04-technical-workflow.drawio` relies on the app being reachable for the live
+  demo (§0 credentials in the matching `.md`); dry-run the env before the demo.
 - Open the `.drawio` files in draw.io to edit (https://app.diagrams.net).

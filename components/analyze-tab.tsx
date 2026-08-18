@@ -19,12 +19,16 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 import type { ColumnDef, ColumnStats } from "@/lib/types";
+import type { ReportBlockContent } from "@/lib/actions/report-blocks";
 
 interface AnalyzeTabProps {
   datasetId: string;
   columns: ColumnDef[];
   initialStats: ColumnStats[];
+  onAddBlock?: (block: ReportBlockContent) => void;
 }
 
 const NUMERIC_OPS = ["count", "sum", "avg"] as const;
@@ -36,7 +40,7 @@ const TYPE_DOT: Record<string, string> = {
   boolean: "bg-success",
 };
 
-export function AnalyzeTab({ datasetId, columns, initialStats }: AnalyzeTabProps) {
+export function AnalyzeTab({ datasetId, columns, initialStats, onAddBlock }: AnalyzeTabProps) {
   const supabase = useSupabase();
 
   const { data: stats } = useQuery({
@@ -88,16 +92,93 @@ export function AnalyzeTab({ datasetId, columns, initialStats }: AnalyzeTabProps
     [groupResult.data],
   );
 
+  const addStatsBlock = () => {
+    if (!onAddBlock) return;
+    const statsRows = columns.map((col) => {
+      const s = statsByColumn.get(col.key);
+      return [
+        col.label,
+        col.type,
+        s?.distinct_count ?? null,
+        s?.null_count ?? null,
+        s?.min ?? null,
+        s?.max ?? null,
+        s?.avg ?? null,
+      ];
+    });
+    onAddBlock({
+      kind: "table",
+      title: "Column statistics",
+      body: {
+        columns: [
+          { key: "column", label: "Column" },
+          { key: "type", label: "Type" },
+          { key: "distinct", label: "Distinct" },
+          { key: "empty", label: "Empty" },
+          { key: "min", label: "Min" },
+          { key: "max", label: "Max" },
+          { key: "avg", label: "Avg" },
+        ],
+        rows: statsRows,
+      },
+      chartType: null,
+      branchIds: [],
+    });
+  };
+
+  const groupMetric = `${aggFn}${aggFn === "count" ? "" : ` ${aggCol ?? ""}`} by ${groupCol}`;
+
+  const addGroupChart = () => {
+    if (!onAddBlock || chartData.length === 0) return;
+    onAddBlock({
+      kind: "chart",
+      title: groupMetric,
+      body: { series: chartData.map((d) => ({ bucket: d.label, value: d.value })), metric: groupMetric },
+      chartType: "bar",
+      branchIds: [],
+    });
+  };
+
+  const addGroupTable = () => {
+    if (!onAddBlock || chartData.length === 0) return;
+    onAddBlock({
+      kind: "table",
+      title: groupMetric,
+      body: {
+        columns: [
+          { key: "group", label: "Group" },
+          { key: "count", label: "Rows" },
+          { key: "value", label: aggFn === "count" ? "Count" : `${aggFn} ${aggCol ?? ""}` },
+        ],
+        rows: (groupResult.data ?? []).map((r) => [
+          r.label === "" ? "(empty)" : r.label,
+          r.count,
+          r.value ?? r.count,
+        ]),
+      },
+      chartType: null,
+      branchIds: [],
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Column stats */}
       <Card>
         <CardHeader>
-          <div>
-            <CardTitle>Column statistics</CardTitle>
-            <CardDescription className="mt-0.5">
-              A quick profile of every column in the dataset.
-            </CardDescription>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <CardTitle>Column statistics</CardTitle>
+              <CardDescription className="mt-0.5">
+                A quick profile of every column in the dataset.
+              </CardDescription>
+            </div>
+            {onAddBlock && (
+              <Button size="sm" variant="secondary" onClick={addStatsBlock} title="Add a statistics insight to the report">
+                <Plus className="h-3.5 w-3.5" />
+                Add to report
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="overflow-x-auto p-0">
@@ -158,11 +239,25 @@ export function AnalyzeTab({ datasetId, columns, initialStats }: AnalyzeTabProps
 
       {/* Group by */}
       <section>
-        <div className="mb-3">
-          <h3 className="text-sm font-semibold text-foreground">Group by aggregation</h3>
-          <p className="mt-0.5 text-sm text-muted">
-            Split the data by a column and chart a count, sum, or average.
-          </p>
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Group by aggregation</h3>
+            <p className="mt-0.5 text-sm text-muted">
+              Split the data by a column and chart a count, sum, or average.
+            </p>
+          </div>
+          {onAddBlock && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Button size="sm" variant="secondary" onClick={addGroupChart} disabled={chartData.length === 0} title="Add the group-by result as a chart">
+                <Plus className="h-3.5 w-3.5" />
+                Add chart
+              </Button>
+              <Button size="sm" variant="secondary" onClick={addGroupTable} disabled={chartData.length === 0} title="Add the group-by result as a table">
+                <Plus className="h-3.5 w-3.5" />
+                Add table
+              </Button>
+            </div>
+          )}
         </div>
         <Card>
           <CardContent className="flex flex-wrap items-start gap-x-4 gap-y-4 p-4">

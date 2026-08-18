@@ -13,3 +13,6 @@ export const ESTIMATED_ROW_HEIGHT = 36;
 export const IMPORT_CHUNK_SIZE = 500;
 
 export const IMPORT_CONCURRENCY = 8;
+
+// Pharmacy-facing currency. Override via NEXT_PUBLIC_CURRENCY (ISO 4217).
+export const APP_CURRENCY = process.env.NEXT_PUBLIC_CURRENCY ?? "EGP";

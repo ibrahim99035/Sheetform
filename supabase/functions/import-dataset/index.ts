@@ -29,31 +29,98 @@ function toText(value: unknown): string | null {
   return String(value);
 }
 
-function coerceValue(type: ColumnType, raw: unknown): unknown {
-  if (raw === null || raw === undefined) return null;
-  const text = toText(raw);
+function parseNumericValue(value: unknown): number | null {
+  const text = toText(value);
   if (text === null) return null;
+  let s = text.replace(/[^0-9+\-.,eE\s]/g, "").replace(/\s+/g, "").trim();
+  if (s === "") return null;
+  if (!/^[+-]?[0-9][0-9.,]*([eE][+-]?[0-9]+)?$/.test(s)) return null;
+  const sign = /^[+-]/.test(s) ? s.slice(0, 1) : "";
+  if (sign) s = s.slice(1);
+  let exp = "";
+  const expMatch = s.match(/[eE][+-]?[0-9]+/);
+  if (expMatch) {
+    exp = expMatch[0];
+    s = s.slice(0, expMatch.index);
+  }
+  const normalized = normalizeNumericSeparators(s);
+  if (normalized === null) return null;
+  const num = Number(`${sign}${normalized}${exp}`);
+  return Number.isFinite(num) ? num : null;
+}
+
+function normalizeNumericSeparators(s: string): string | null {
+  if (s === "") return null;
+  const commaCount = (s.match(/,/g) ?? []).length;
+  const dotCount = (s.match(/\./g) ?? []).length;
+  if (commaCount > 0 && dotCount > 0) {
+    if (s.lastIndexOf(",") > s.lastIndexOf(".")) {
+      s = s.replace(/\./g, "").replace(/,/g, ".");
+    } else {
+      s = s.replace(/,/g, "");
+    }
+    return /^[0-9]+(\.[0-9]+)?$/.test(s) ? s : null;
+  }
+  if (commaCount > 0) {
+    const lastComma = s.lastIndexOf(",");
+    const trailing = s.length - lastComma - 1;
+    if (trailing <= 2 && !/^\d{1,3}(,\d{3})+$/.test(s)) {
+      s = s.slice(0, lastComma) + "." + s.slice(lastComma + 1);
+    } else {
+      s = s.replace(/,/g, "");
+    }
+    return /^[0-9]+(\.[0-9]+)?$/.test(s) ? s : null;
+  }
+  if (dotCount > 0) {
+    if (dotCount === 1 && /^\d{1,3}\.\d{3}$/.test(s)) {
+      s = s.replace(/\./g, "");
+    } else if (!/^\d{1,3}(\.\d{3})+$/.test(s)) {
+      return /^\d+\.\d+$/.test(s) ? s : null;
+    } else {
+      s = s.replace(/\./g, "");
+    }
+    return /^[0-9]+(\.[0-9]+)?$/.test(s) ? s : null;
+  }
+  return /^[0-9]+$/.test(s) ? s : null;
+}
+
+function coerceValueDetailed(
+  type: ColumnType,
+  raw: unknown,
+): { value: unknown; valid: boolean } | null {
+  if (raw === null || raw === undefined) return null;
+  const blank =
+    typeof raw === "string" || raw instanceof String
+      ? raw.toString().trim() === ""
+      : false;
+  if (blank) return null;
 
   switch (type) {
-    case "string":
-      return text;
+    case "string": {
+      const text = toText(raw);
+      return text === null ? null : { value: text, valid: true };
+    }
     case "numeric": {
-      const trimmed = text.trim();
-      if (trimmed === "") return null;
-      const num = Number(trimmed);
-      return Number.isFinite(num) ? num : null;
+      const num = parseNumericValue(raw);
+      return num === null
+        ? { value: null, valid: false }
+        : { value: num, valid: true };
     }
     case "boolean": {
-      const t = text.trim().toLowerCase();
-      if (TRUE_VALUES.has(t)) return true;
-      if (FALSE_VALUES.has(t)) return false;
-      return null;
+      const t = toText(raw);
+      if (t === null) return null;
+      const trimmed = t.trim().toLowerCase();
+      if (TRUE_VALUES.has(trimmed)) return { value: true, valid: true };
+      if (FALSE_VALUES.has(trimmed)) return { value: false, valid: true };
+      return { value: null, valid: false };
     }
     case "date": {
-      if (/^-?\d+$/.test(text.trim())) return null;
-      const ts = Date.parse(text.trim());
-      if (isNaN(ts)) return null;
-      return new Date(ts).toISOString();
+      if (/^-?\d+$/.test(toText(raw)!.trim())) {
+        return { value: null, valid: false };
+      }
+      const ts = Date.parse(toText(raw)!.trim());
+      if (isNaN(ts)) return { value: null, valid: false };
+      return { value: new Date(ts).toISOString(), valid: true };
     }
     default:
       return null;
@@ -162,7 +229,12 @@ async function chunkedInsert(datasetId: string, rows: Array<{ row_index: number;
   await Promise.all(workers);
 }
 
-async function insertStats(datasetId: string, defs: Array<{ key: string; type: ColumnType }>, stats: Record<string, any>): Promise<void> {
+async function insertStats(
+  datasetId: string,
+  defs: Array<{ key: string; type: ColumnType }>,
+  stats: Record<string, any>,
+  invalidCounts: Record<string, number>,
+): Promise<void> {
   const rows = defs.map((d) => {
     const s = stats[d.key];
     return {
@@ -174,6 +246,7 @@ async function insertStats(datasetId: string, defs: Array<{ key: string; type: C
       sum: s.sum,
       distinct_count: s.distinct_count,
       null_count: s.null_count,
+      invalid_count: invalidCounts[d.key] ?? 0,
     };
   });
   if (rows.length > 0) {
@@ -227,11 +300,18 @@ async function run(datasetId: string): Promise<{ status: number; body: unknown }
     }
 
     const dataRows: Array<{ row_index: number; data: Record<string, unknown> }> = [];
+    const invalidCounts: Record<string, number> = {};
+    for (const def of defs) invalidCounts[def.key] = 0;
     let rowIndex = 1;
     for (const row of parsed.rows) {
       const data: Record<string, unknown> = {};
       for (let c = 0; c < defs.length; c++) {
-        data[defs[c].key] = coerceValue(defs[c].type, row[c]);
+        const raw = row[c];
+        const coerced = coerceValueDetailed(defs[c].type, raw);
+        data[defs[c].key] = coerced === null ? null : coerced.value;
+        if (coerced !== null && !coerced.valid) {
+          invalidCounts[defs[c].key] += 1;
+        }
       }
       if (isAllEmpty(data)) continue;
       if (rowIndex > MAX_ROWS) {
@@ -244,7 +324,7 @@ async function run(datasetId: string): Promise<{ status: number; body: unknown }
 
     await clearRows(datasetId);
     await chunkedInsert(datasetId, dataRows);
-    await insertStats(datasetId, defs, stats);
+    await insertStats(datasetId, defs, stats, invalidCounts);
 
     await supabase
       .from("datasets")

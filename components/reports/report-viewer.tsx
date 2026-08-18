@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
-import { RichTextView } from "@/components/rich-text-view";
+import { ReportBlockBody } from "@/components/report-block-body";
 import { snapshotKpis, queueDeliveries, retryDeliveries } from "@/lib/actions/reports";
 
 const METRICS = ["revenue", "units", "margin"];
@@ -24,59 +24,6 @@ function formatDate(iso: string | null) {
     hour: "numeric",
     minute: "2-digit",
   });
-}
-
-function BodyView({ body }: { body: Record<string, unknown> | null }) {
-  if (!body) return <p className="text-sm text-faint">—</p>;
-  const entries = Object.entries(body);
-  if (entries.length === 0) return <p className="text-sm text-faint">—</p>;
-
-  // { text: "…" } renders as plain paragraphs; { text: <tiptap doc> } renders rich text.
-  if ("text" in body && typeof body.text !== "undefined") {
-    if (typeof body.text === "string") {
-      return <p className="whitespace-pre-wrap text-sm text-foreground">{body.text}</p>;
-    }
-    if (typeof body.text === "object" && body.text !== null && (body.text as { type?: string }).type === "doc") {
-      return <RichTextView doc={body.text as never} />;
-    }
-  }
-
-  // { series: [...], metric } renders as a compact bar list.
-  if (Array.isArray(body.series)) {
-    const series = body.series as { bucket?: string; value?: number | null }[];
-    const max = Math.max(...series.map((s) => Number(s.value ?? 0)), 1);
-    return (
-      <div className="space-y-1">
-        {series.map((s, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <span className="w-24 shrink-0 truncate text-xs text-muted">{String(s.bucket ?? "")}</span>
-            <div className="h-4 flex-1 overflow-hidden rounded bg-surface-subtle">
-              <div
-                className="h-full rounded bg-brand/70"
-                style={{ width: `${Math.min(100, (Number(s.value ?? 0) / max) * 100)}%` }}
-              />
-            </div>
-            <span className="w-16 shrink-0 text-right text-xs tabular-nums text-foreground">
-              {s.value?.toLocaleString() ?? "—"}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
-      {entries.map(([k, v]) => (
-        <div key={k} className="flex items-baseline justify-between gap-2 border-b border-border/60 pb-1">
-          <dt className="text-xs text-faint">{k}</dt>
-          <dd className="text-sm font-medium tabular-nums text-foreground">
-            {typeof v === "object" ? JSON.stringify(v) : String(v)}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
 }
 
 const kindStyle: Record<string, { badge: string; label: string }> = {
@@ -251,7 +198,7 @@ export function ReportViewer({
                     </div>
                   </div>
                 )}
-                <BodyView body={c.body} />
+                <ReportBlockBody body={c.body} />
               </CardContent>
             </Card>
           ))}
@@ -281,7 +228,7 @@ export function ReportViewer({
                           ))}
                         </div>
                       )}
-                      <BodyView body={it.body} />
+                      <ReportBlockBody body={it.body} />
                     </CardContent>
                   </Card>
                 ))}

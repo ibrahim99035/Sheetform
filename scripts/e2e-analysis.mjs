@@ -202,8 +202,24 @@ dCount === 0 ? ok("pharmacist reads 0 datasets") : bad("pharm dataset cutover", 
 const { data: kpisPharm } = await pharm.rpc("dataset_kpis", { p_dataset_id: dataset_id });
 kpisPharm != null ? ok("pharmacist can call KPI fn") : bad("pharm kpi fn", "null");
 
+// ---- 12. engine RPCs that power the full analysis report ----
+console.log("12) engine RPCs");
+const r = {};
+const { data: rRefund } = await owner.rpc("refund_rate", { p_dataset_id: dataset_id });
+near(rRefund?.gross_revenue, 42) ? ok("refund_rate gross_revenue 42") : bad("refund_rate", JSON.stringify(rRefund));
+const { data: rConc } = await owner.rpc("concentration", { p_dataset_id: dataset_id, p_n: 20 });
+rConc?.available === true ? ok("concentration available") : bad("concentration", JSON.stringify(rConc));
+const { data: rRank } = await owner.rpc("rank_samples", { p_dataset_id: dataset_id, p_dimension: "product", p_metric: "revenue", p_n: 10, p_dir: "desc" });
+Array.isArray(rRank) && rRank.length >= 1 ? ok(`rank_samples ${rRank.length} rows`) : bad("rank_samples", JSON.stringify(rRank));
+const { data: rTp } = await owner.rpc("time_pattern", { p_dataset_id: dataset_id, p_granularity: "dow" });
+Array.isArray(rTp) && rTp.length >= 1 ? ok(`time_pattern ${rTp.length} rows`) : bad("time_pattern", JSON.stringify(rTp));
+const { data: rQp } = await owner.rpc("quality_profile", { p_dataset_id: dataset_id });
+Array.isArray(rQp?.columns) && rQp.columns.length === 8 ? ok("quality_profile 8 columns") : bad("quality_profile", JSON.stringify(rQp));
+const { data: rRoleMap } = await owner.rpc("_sf_dataset_key_map", { p_dataset_id: dataset_id });
+rRoleMap?.qty && rRoleMap?.unit_price && rRoleMap?.date ? ok("resolver maps qty/price/date") : bad("key map", JSON.stringify(rRoleMap));
+
 // ---- cleanup ----
-console.log("12) cleanup");
+console.log("13) cleanup");
 if (org) await SERVICE.from("organizations").delete().eq("id", org);
 await SERVICE.auth.admin.deleteUser(ownerUser.user.id).catch(() => {});
 await SERVICE.auth.admin.deleteUser(pharmUser.user.id).catch(() => {});

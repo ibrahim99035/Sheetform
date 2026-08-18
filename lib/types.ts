@@ -1,9 +1,30 @@
 export type ColumnType = "string" | "numeric" | "date" | "boolean";
 
+export type ColumnRole =
+  | "date"
+  | "branch"
+  | "transaction_id"
+  | "product"
+  | "category"
+  | "qty"
+  | "unit_price"
+  | "cost"
+  | "refund"
+  | "sku"
+  | "revenue"
+  | "expense"
+  | "tax"
+  | "account"
+  | "patient";
+
+export type RoleConfidence = "high" | "medium" | "low";
+
 export interface ColumnDef {
   key: string;
   label: string;
   type: ColumnType;
+  role?: ColumnRole;
+  role_confidence?: RoleConfidence;
 }
 
 export type DatasetStatus = "pending" | "processing" | "ready" | "error";
@@ -39,6 +60,7 @@ export interface ColumnStats {
   sum: number | null;
   distinct_count: number | null;
   null_count: number | null;
+  invalid_count: number | null;
   computed_at: string;
 }
 
@@ -115,4 +137,6 @@ export interface InferredColumn {
   key: string;
   label: string;
   type: ColumnType;
+  role?: ColumnRole;
+  role_confidence?: RoleConfidence;
 }

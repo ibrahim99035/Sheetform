@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   BarChart3,
   CopyX,
@@ -14,6 +15,7 @@ import {
   RefreshCcw,
   RotateCcw,
   RotateCw,
+  Sparkles,
   Table2,
   Trash2,
   TriangleAlert,
@@ -22,6 +24,7 @@ import {
 import { useSupabase } from "@/lib/supabase/provider";
 import { DataTable } from "@/components/data-table";
 import { AnalyzeTab } from "@/components/analyze-tab";
+import { EngineTab } from "@/components/engine-tab";
 import { ActivityTab } from "@/components/activity-tab";
 import { StatusBadge } from "@/components/status-badge";
 import { applyOperation, redoOperation, undoOperation } from "@/lib/dataset-api";
@@ -44,6 +47,9 @@ import type {
   Operation,
   ViewState,
 } from "@/lib/types";
+import type { AnalysisReport } from "@/lib/analysis/types";
+import { ChevronLeft } from "lucide-react";
+import type { ReportBlockContent } from "@/lib/actions/report-blocks";
 
 const FILTER_OPS: { value: FilterOp; label: string }[] = [
   { value: "contains", label: "contains" },
@@ -57,15 +63,25 @@ const FILTER_OPS: { value: FilterOp; label: string }[] = [
   { value: "is_not_empty", label: "is not empty" },
 ];
 
-type Tab = "data" | "analyze" | "activity";
+type Tab = "data" | "analyze" | "engine" | "activity";
 
 interface WorkspaceProps {
   dataset: Dataset;
   initialStats: ColumnStats[];
   initialOps: Operation[];
+  initialReport?: AnalysisReport | null;
+  onAddBlock?: (block: ReportBlockContent) => void;
+  backHref?: string;
 }
 
-export function DatasetWorkspace({ dataset, initialStats, initialOps }: WorkspaceProps) {
+export function DatasetWorkspace({
+  dataset,
+  initialStats,
+  initialOps,
+  initialReport,
+  onAddBlock,
+  backHref,
+}: WorkspaceProps) {
   const supabase = useSupabase();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -295,6 +311,15 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
+          {backHref && (
+            <Link
+              href={backHref}
+              className="mb-1 inline-flex items-center gap-0.5 text-xs font-medium text-muted transition hover:text-foreground"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Back to application
+            </Link>
+          )}
           <div className="flex items-center gap-2.5">
             <h1 className="truncate text-xl font-semibold tracking-tight text-foreground">
               {ds.name}
@@ -409,6 +434,7 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
         items={[
           { value: "data", label: "Data", icon: <Table2 className="h-3.5 w-3.5" /> },
           { value: "analyze", label: "Analyze", icon: <BarChart3 className="h-3.5 w-3.5" /> },
+          { value: "engine", label: "Engine", icon: <Sparkles className="h-3.5 w-3.5" /> },
           { value: "activity", label: "Activity", icon: <History className="h-3.5 w-3.5" /> },
         ]}
       />
@@ -531,7 +557,21 @@ export function DatasetWorkspace({ dataset, initialStats, initialOps }: Workspac
       )}
 
       {tab === "analyze" && ds.status === "ready" && (
-        <AnalyzeTab datasetId={ds.id} columns={ds.column_defs} initialStats={initialStats} />
+        <AnalyzeTab
+          datasetId={ds.id}
+          columns={ds.column_defs}
+          initialStats={initialStats}
+          onAddBlock={onAddBlock}
+        />
+      )}
+
+      {tab === "engine" && ds.status === "ready" && (
+        <EngineTab
+          datasetId={ds.id}
+          datasetName={ds.name}
+          initialReport={initialReport ?? null}
+          onAddBlock={onAddBlock}
+        />
       )}
 
       {tab === "activity" && (

@@ -27,6 +27,7 @@ const WHATSAPP_TOKEN = Deno.env.get("WHATSAPP_TOKEN");
 const WHATSAPP_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_ID");
 const DRY_RUN = Deno.env.get("DRY_RUN") === "1" || Deno.env.get("DRY_RUN") === "true";
 const BATCH = Number(Deno.env.get("BATCH") ?? "25");
+const APP_CURRENCY = Deno.env.get("APP_CURRENCY") ?? "EGP";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -74,7 +75,7 @@ async function renderBody(delivery: {
   if (kpi.revenue !== undefined) lines.push(`Revenue: ${kpi.revenue}`);
   if (kpi.units !== undefined) lines.push(`Units: ${kpi.units}`);
   if (kpi.gross_margin_pct !== undefined) lines.push(`Gross margin: ${kpi.gross_margin_pct}%`);
-  if (kpi.gross_margin !== undefined) lines.push(`Gross margin (AMD): ${kpi.gross_margin}`);
+  if (kpi.gross_margin !== undefined) lines.push(`Gross margin (${APP_CURRENCY}): ${kpi.gross_margin}`);
   if (series.length) {
     lines.push(`${metric}: ${series.map((s) => `${s.bucket}=${s.value}`).join(", ")}`);
   }

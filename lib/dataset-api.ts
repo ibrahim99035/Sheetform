@@ -51,6 +51,7 @@ export async function fetchGroupBy(
   client: SupabaseClient,
   datasetId: string,
   params: GroupByParams,
+  view?: ViewState,
 ): Promise<GroupByResult[]> {
   const { data, error } = await client.rpc("group_by", {
     p_dataset_id: datasetId,
@@ -59,9 +60,30 @@ export async function fetchGroupBy(
     p_agg_fn: params.fn,
     p_top_n: params.topN,
     p_min_count: params.minCount,
+    p_view: view ?? { filters: [] },
   });
   if (error) throw new Error(error.message);
   return (data ?? []) as GroupByResult[];
+}
+
+export interface AddColumnParams {
+  label: string;
+  key?: string;
+  type?: "numeric" | "text" | "date" | "boolean";
+  formula?: string;
+}
+
+export async function addColumn(
+  client: SupabaseClient,
+  datasetId: string,
+  params: AddColumnParams,
+): Promise<OpResult> {
+  return applyOperation(client, datasetId, "add_column", {
+    label: params.label,
+    key: params.key,
+    type: params.type,
+    formula: params.formula,
+  });
 }
 
 export interface OpResult {

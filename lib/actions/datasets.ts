@@ -6,13 +6,13 @@ import { inspectFile } from "@/lib/inspect";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/log";
-import type { ColumnDef, ColumnType } from "@/lib/types";
+import type { ColumnDef, ColumnType, ColumnRole, RoleConfidence } from "@/lib/types";
 
 export interface CreateDatasetInput {
   storagePath: string;
   fileName: string;
   sheetName: string;
-  columns: { label: string; type: ColumnType }[];
+  columns: { label: string; type: ColumnType; role?: ColumnRole; role_confidence?: RoleConfidence }[];
   name?: string;
 }
 
@@ -85,6 +85,8 @@ export async function createDataset(
     key: keys[i],
     label: input.columns[i].label || header[i],
     type: input.columns[i].type,
+    role: input.columns[i].role ?? undefined,
+    role_confidence: input.columns[i].role_confidence ?? undefined,
   }));
 
   const { data: dataset, error } = await supabase

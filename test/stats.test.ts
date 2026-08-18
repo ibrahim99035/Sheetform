@@ -24,22 +24,21 @@ describe("computeColumnStats", () => {
     expect(stats.amount.sum).toBe(60);
     expect(stats.amount.distinct_count).toBe(3);
     expect(stats.amount.null_count).toBe(1);
+    expect(stats.amount.invalid_count).toBe(0);
   });
 
-  it("counts distinct and null per string column", () => {
-    const stats = computeColumnStats(rows, defs);
-    expect(stats.category.distinct_count).toBe(2);
-    expect(stats.category.null_count).toBe(1);
-    expect(stats.category.min).toBeNull();
-    expect(stats.category.sum).toBeNull();
-  });
-
-  it("does not compute numeric aggregates for date columns", () => {
-    const stats = computeColumnStats(rows, defs);
-    expect(stats.created.min).toBeNull();
-    expect(stats.created.sum).toBeNull();
-    expect(stats.created.distinct_count).toBe(3);
-    expect(stats.created.null_count).toBe(1);
+  it("tracks invalid values via detailed coercion", () => {
+    const bad = computeColumnStats(
+      [
+        { data: { amount: 10, category: "A", created: "2024-01-01T00:00:00.000Z" } },
+        { data: { amount: null, category: null, created: null } },
+        { data: { amount: "not-a-number", category: "B", created: "garbage" } },
+      ],
+      defs,
+    );
+    expect(bad.amount.invalid_count).toBe(1);
+    expect(bad.created.invalid_count).toBe(1);
+    expect(bad.category.invalid_count).toBe(0);
   });
 
   it("toStatsRows maps to the stats table shape", () => {

@@ -1,13 +1,33 @@
 "use client";
 
-import type { InferredColumn, ColumnType } from "@/lib/types";
+import type { InferredColumn, ColumnType, ColumnRole } from "@/lib/types";
 import { cn } from "@/lib/cn";
+import { roleLabel } from "@/lib/analysis/roles";
 
 const TYPE_OPTIONS: { value: ColumnType; label: string }[] = [
   { value: "string", label: "Text" },
   { value: "numeric", label: "Number" },
   { value: "date", label: "Date" },
   { value: "boolean", label: "Boolean" },
+];
+
+const ROLE_OPTIONS: { value: ColumnRole | ""; label: string }[] = [
+  { value: "", label: "No role" },
+  { value: "date", label: "Date" },
+  { value: "branch", label: "Branch" },
+  { value: "transaction_id", label: "Transaction" },
+  { value: "product", label: "Product" },
+  { value: "category", label: "Category" },
+  { value: "qty", label: "Quantity" },
+  { value: "unit_price", label: "Unit price" },
+  { value: "cost", label: "Unit cost" },
+  { value: "refund", label: "Refund" },
+  { value: "sku", label: "SKU" },
+  { value: "revenue", label: "Revenue" },
+  { value: "expense", label: "Expense" },
+  { value: "tax", label: "Tax" },
+  { value: "account", label: "Account" },
+  { value: "patient", label: "Patient" },
 ];
 
 const TYPE_DOT: Record<ColumnType, string> = {
@@ -66,6 +86,28 @@ export function PreviewTable({
                       className="w-full rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-foreground outline-none transition focus:border-brand"
                     >
                       {TYPE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <span className="shrink-0 text-[10px] uppercase tracking-wide text-faint">
+                      Role
+                    </span>
+                    <select
+                      value={columns[i]?.role ?? ""}
+                      onChange={(e) =>
+                        updateColumn(i, {
+                          role: (e.target.value || undefined) as ColumnRole | undefined,
+                          role_confidence: e.target.value ? "high" : undefined,
+                        })
+                      }
+                      className="w-full rounded border border-brand/25 bg-brand-subtle px-1.5 py-0.5 text-xs text-brand outline-none transition focus:border-brand"
+                      title={columns[i]?.role ? `Inferred or assigned role (auto: ${roleLabel(columns[i].role!)}${columns[i].role_confidence ? `, ${columns[i].role_confidence}` : ""})` : "Assign a role to this column"}
+                    >
+                      {ROLE_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>
                           {o.label}
                         </option>

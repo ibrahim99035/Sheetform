@@ -37,6 +37,7 @@ interface ComponentDraft {
   branchIds: string[];
   bodyJson: string;
   textDoc: RichTextDoc | null;
+  chartType: "bar" | "line" | "area" | "pie" | null;
 }
 
 interface ItemDraft {
@@ -135,6 +136,11 @@ export function ReportComposer({
       branchIds: c.branch_ids ?? [],
       bodyJson: JSON.stringify(c.body ?? {}, null, 2),
       textDoc: isRichBody(c.body),
+      chartType: typeof (c.body as { chart_type?: string } | null)?.chart_type === "string"
+        ? ((c.body as { chart_type: string }).chart_type as "bar" | "line" | "area" | "pie")
+        : c.kind === "chart"
+          ? "bar"
+          : null,
     })),
   );
   const [items, setItems] = useState<ItemDraft[]>(() =>
@@ -169,7 +175,12 @@ export function ReportComposer({
       components: components.map((c) => ({
         kind: c.kind,
         title: c.title.trim(),
-        body: c.kind === "text" && c.textDoc ? { text: c.textDoc } : toJson(c.bodyJson),
+        body:
+          c.kind === "text" && c.textDoc
+            ? { text: c.textDoc }
+            : c.kind === "chart"
+              ? { ...toJson(c.bodyJson), chart_type: c.chartType ?? "bar" }
+              : toJson(c.bodyJson),
         visibility: c.visibility,
         branchIds: c.branchIds.length > 0 ? c.branchIds : undefined,
       })),
@@ -204,7 +215,7 @@ export function ReportComposer({
   const addComponent = (kind: ComponentKind = "text") =>
     setComponents((p) => [
       ...p,
-      { key: keySeq++, kind, title: "", visibility: "org", branchIds: [], bodyJson: defaultBody(kind), textDoc: kind === "text" ? emptyRichTextDoc() : null },
+      { key: keySeq++, kind, title: "", visibility: "org", branchIds: [], bodyJson: defaultBody(kind), textDoc: kind === "text" ? emptyRichTextDoc() : null, chartType: kind === "chart" ? "bar" : null },
     ]);
 
   return (
@@ -345,7 +356,26 @@ export function ReportComposer({
                   placeholder="Write the component body…"
                 />
               ) : (
-                <textarea className={textareaClass} rows={4} value={c.bodyJson} onChange={(e) => patchComponent(c.key, { bodyJson: e.target.value })} placeholder={defaultBody(c.kind)} />
+                <div className="space-y-2">
+                  {c.kind === "chart" && (
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-muted">Chart type</Label>
+                      <Select
+                        className="w-32"
+                        value={c.chartType ?? "bar"}
+                        onChange={(e) => patchComponent(c.key, { chartType: e.target.value as "bar" | "line" | "area" | "pie" })}
+                        aria-label="Chart type"
+                      >
+                        {(["bar", "line", "area", "pie"] as const).map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  )}
+                  <textarea className={textareaClass} rows={4} value={c.bodyJson} onChange={(e) => patchComponent(c.key, { bodyJson: e.target.value })} placeholder={defaultBody(c.kind)} />
+                </div>
               )}
               {c.visibility === "branch" && (
                 <div className="flex flex-wrap items-center gap-1.5">

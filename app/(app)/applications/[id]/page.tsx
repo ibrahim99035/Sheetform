@@ -8,10 +8,13 @@ export const dynamic = "force-dynamic";
 
 export default async function ApplicationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ dataset?: string }>;
 }) {
   const { id } = await params;
+  const { dataset } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -22,5 +25,5 @@ export default async function ApplicationPage({
 
   if (!detail) notFound();
 
-  return <ApplicationWorkspace detail={detail} branches={branches} />;
+  return <ApplicationWorkspace detail={detail} branches={branches} initialDatasetId={dataset ?? null} />;
 }

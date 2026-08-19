@@ -14,6 +14,8 @@ export interface CreateDatasetInput {
   sheetName: string;
   columns: { label: string; type: ColumnType; role?: ColumnRole; role_confidence?: RoleConfidence }[];
   name?: string;
+  serviceCoverage?: unknown;
+  dataRequests?: { role: ColumnRole; label: string }[];
 }
 
 export type CreateDatasetResult =
@@ -99,6 +101,8 @@ export async function createDataset(
       status: "pending",
       column_defs: columnDefs,
       sheet_name: inspected.decision.kind === "picker" ? input.sheetName : undefined,
+      service_coverage: input.serviceCoverage ?? null,
+      data_requests: input.dataRequests && input.dataRequests.length > 0 ? input.dataRequests : null,
     })
     .select("id")
     .single();

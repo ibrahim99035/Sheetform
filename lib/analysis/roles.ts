@@ -85,6 +85,72 @@ const TOKEN_LEXICON: Record<ColumnRole, string[]> = {
     "patient", "patientid", "patient_id", "npatient", "numpatient",
     "client_mrid", "dossier", "dossierpatient", "mrid", "mrayad",
   ],
+  supplier: [
+    "supplier", "fournisseur", "grossiste", "wholesaler", "vendor",
+    "distributor", "distributeur", "lieferant", "مورد", "موزع", "مزوّد",
+  ],
+  purchase_date: [
+    "purchase_date", "purchasedate", "buyingdate", "order_date", "orderdate",
+    "dateachat", "datedachat", "achat", "datecommande", "datefacture", "datebon",
+    "استلام", "تاريخالشراء",
+  ],
+  purchase_qty: [
+    "purchase_qty", "purchaseqty", "orderqty", "orderedqty", "receivedqty",
+    "qtyreceived", "qtybought", "quantitypurchased", "كميةالشراء", "الكميةالمستلمة",
+  ],
+  purchase_cost: [
+    "purchase_cost", "purchasecost", "purchaseprice", "buyprice", "popprice",
+    "prixdachat", "paht", "costprice", "سعرالشراء", "تكلفةالشراء",
+  ],
+  purchase_order: [
+    "purchase_order", "purchaseorder", "pono", "ponumber", "boncommande",
+    "numeroorder", "orderno", "رقمالطلب", "رقمالأمر", "رقمالفاتورة",
+  ],
+  city: [
+    "city", "ville", "town", "stad", "ort", "مدينة", "المدينه", "المدينة",
+  ],
+  country: [
+    "country", "pays", "land", "دولة", "البلد", "بلاد",
+  ],
+  region: [
+    "region", "governorate", "district", "province", "wilaya", "state",
+    "محافظة", "منطقة", "إقليم", "اقليم", "منطقه",
+  ],
+  latitude: [
+    "latitude", "lat", "latitud", "lat_coord", "عرض", "خطالعرض",
+  ],
+  longitude: [
+    "longitude", "lng", "lon", "long", "longt", "lng_coord", "طول", "خطالطول",
+  ],
+  budget: [
+    "budget", "budgetamount", "target", "targetamount", "planamount", "goal",
+    "الهدف", "الميزانية", "موازنة", "المستهدف",
+  ],
+  opening_stock: [
+    "opening_stock", "openingstock", "opening", "openstock", "stock_debut",
+    "operationstock", "purchases", "الرصيدالافتتاحي", "أولالمدة", "مشتريات",
+  ],
+  closing_stock: [
+    "closing_stock", "closingstock", "closing", "closestock", "stock_fin",
+    "ending_inventory", "الرصيدالختامي", "أخرمدة", "إجماليالمخزون",
+  ],
+  batch: [
+    "batch", "batch_no", "batchnumber", "batchno", "lot", "lot_no",
+    "lotnumber", "دفعة", "الدفعة", "رقمالدفعة", "تشغيلة", "لوت",
+  ],
+  counted_qty: [
+    "counted_qty", "countedquantity", "qtycounted", "physical_count",
+    "physicalcount", "countedstock", "recount", "كميةالجرد", "العددالفعلي",
+    "جرد", "الجرد",
+  ],
+  sales_rep: [
+    "sales_rep", "salesrep", "rep", "salesperson", "representative",
+    "مندوب", "مندوبالمبيعات", "البائع", "صيدلي", "pharmacist",
+  ],
+  sales_team: [
+    "sales_team", "salesteam", "team", "teamname", "salesregion",
+    "فريق", "فريقالمبيعات", "الفريق",
+  ],
 };
 
 const TOKEN_INDEX: Map<string, ColumnRole> = new Map();
@@ -98,8 +164,10 @@ export function normalizeHeader(label: string): string {
   return label
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "");
+    // strip combining marks (accents) and Arabic harakat (diacritics)
+    .replace(/[\u0300-\u036f\u064b-\u065f]/g, "")
+    // keep letters + numbers from any script (Latin, Arabic, …); drop separators
+    .replace(/[^\p{L}\p{N}]+/gu, "");
 }
 
 function headerExactMatch(label: string): ColumnRole | null {
@@ -111,6 +179,9 @@ function headerSubstringMatch(label: string): ColumnRole | null {
   // priority: money-ish composites before generic single tokens so a
   // "Sales Total" doesn't fall through to qty or total->revenue by accident
   if (/refund|retour|avoir|remboursement|rrd|mordoudat/.test(norm)) return "refund";
+  if (/counted|musadad|physical|actual.?count|recount|جرد|العددالفعل|العددمعدود/.test(norm)) return "counted_qty";
+  if (/unit.?purchase.?cost|purchase.?cost|purchase.?price|purchase.?amount|prixdachat|souraidachat|تكلفةالشراء|سعرالشراء/.test(norm)) return "purchase_cost";
+  if (/purchase.?qty|qty.?purchased|quantity.?purchased|quantitypurchase|receivedqty|qtybought|كميةالشراء|الكميةالمستلمة/.test(norm)) return "purchase_qty";
   if (/patient|mrid|dossier/.test(norm)) return "patient";
   if (/invoice|facture|transaction|ticket|receipt|recu|bonno/.test(norm)) {
     return "transaction_id";
@@ -345,7 +416,24 @@ export function roleLabel(role: ColumnRole): string {
     expense: "Expense",
     tax: "Tax",
     account: "Account",
-    patient: "Patient",
-  };
+patient: "Patient",
+  supplier: "Supplier",
+  purchase_date: "Purchase date",
+  purchase_qty: "Purchase qty",
+  purchase_cost: "Purchase cost",
+  purchase_order: "Purchase order",
+  city: "City",
+  country: "Country",
+  region: "Region",
+  latitude: "Latitude",
+  longitude: "Longitude",
+  budget: "Budget / target",
+  opening_stock: "Opening stock",
+  closing_stock: "Closing stock",
+  batch: "Batch / lot",
+  counted_qty: "Counted qty",
+  sales_rep: "Sales rep",
+  sales_team: "Sales team",
+};
   return labels[role];
 }

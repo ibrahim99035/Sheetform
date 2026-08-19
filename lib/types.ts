@@ -21,6 +21,10 @@ export interface BenchmarkOptIn {
   optedInAt?: string | null;
 }
 
+/** Semantic column roles. Beyond the core sales/inventory roles, the
+ * extended set drive the supplier, geographic, budget and stock-count
+ * (physical inventory count / الجرد) analytics, plus sales-force
+ * attribution for chain / upstream (manufacturer) submissions. */
 export type ColumnRole =
   | "date"
   | "branch"
@@ -36,7 +40,28 @@ export type ColumnRole =
   | "expense"
   | "tax"
   | "account"
-  | "patient";
+  | "patient"
+  // supplier / purchasing
+  | "supplier"
+  | "purchase_date"
+  | "purchase_qty"
+  | "purchase_cost"
+  | "purchase_order"
+  // geographic
+  | "city"
+  | "country"
+  | "region"
+  | "latitude"
+  | "longitude"
+  // financial budgets & physical stock count
+  | "budget"
+  | "opening_stock"
+  | "closing_stock"
+  | "batch"
+  | "counted_qty"
+  // sales-force attribution (chain / manufacturer files)
+  | "sales_rep"
+  | "sales_team";
 
 export type RoleConfidence = "high" | "medium" | "low";
 

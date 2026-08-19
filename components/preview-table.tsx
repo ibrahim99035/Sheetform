@@ -28,6 +28,23 @@ const ROLE_OPTIONS: { value: ColumnRole | ""; label: string }[] = [
   { value: "tax", label: "Tax" },
   { value: "account", label: "Account" },
   { value: "patient", label: "Patient" },
+  { value: "supplier", label: "Supplier" },
+  { value: "purchase_date", label: "Purchase date" },
+  { value: "purchase_qty", label: "Purchase qty" },
+  { value: "purchase_cost", label: "Purchase cost" },
+  { value: "purchase_order", label: "Purchase order" },
+  { value: "city", label: "City" },
+  { value: "country", label: "Country" },
+  { value: "region", label: "Region" },
+  { value: "latitude", label: "Latitude" },
+  { value: "longitude", label: "Longitude" },
+  { value: "budget", label: "Budget / target" },
+  { value: "opening_stock", label: "Opening stock" },
+  { value: "closing_stock", label: "Closing stock" },
+  { value: "batch", label: "Batch / lot" },
+  { value: "counted_qty", label: "Counted qty" },
+  { value: "sales_rep", label: "Sales rep" },
+  { value: "sales_team", label: "Sales team" },
 ];
 
 const TYPE_DOT: Record<ColumnType, string> = {

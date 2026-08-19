@@ -15,11 +15,17 @@ import type {
   BasketModuleResult,
   ForecastModuleResult,
   BenchmarkModuleResult,
+  SalesLensModuleResult,
+  SupplierModuleResult,
+  GeographyModuleResult,
+  BudgetModuleResult,
+  StocktakeModuleResult,
   ModuleState,
 } from "@/lib/analysis/modules";
 import type { AbcXyzResult } from "@/lib/analysis/abc-xyz";
 import type { SafetyStockResult } from "@/lib/analysis/safety-stock";
 import type { ExpiryResult } from "@/lib/analysis/expiry";
+import type { SalesRankRow } from "@/lib/analysis/sales";
 import type { ColumnDef } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -100,7 +106,7 @@ export function PharmacyModules({ datasetId, columns, localRows }: PharmacyModul
         </div>
       )}
 
-      {suite && !isPending && <SuiteBody suite={suite} columns={columns} datasetId={datasetId} />}
+      {suite && !isPending && <SuiteBody suite={suite} datasetId={datasetId} />}
     </section>
   );
 }
@@ -115,9 +121,14 @@ function Unavailable({ state }: { state: { available: false; reason: string } })
   );
 }
 
-function SuiteBody({ suite, columns, datasetId }: { suite: PharmacySuite; columns: ColumnDef[]; datasetId: string }) {
+function SuiteBody({ suite, datasetId }: { suite: PharmacySuite; datasetId: string }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
+      <SalesCard state={suite.modules.sales} />
+      <SupplierCard state={suite.modules.supplier} />
+      <GeographyCard state={suite.modules.geography} />
+      <BudgetCard state={suite.modules.budget} />
+      <StocktakeCard state={suite.modules.stocktake} />
       <RfmCard state={suite.modules.rfm} />
       <BasketCard state={suite.modules.basket} />
       <AbcCard state={suite.modules.abcXyz} />
@@ -125,6 +136,208 @@ function SuiteBody({ suite, columns, datasetId }: { suite: PharmacySuite; column
       <ExpiryCard state={suite.modules.expiry} />
       <ForecastCard state={suite.modules.forecast} />
       <BenchmarkCard state={suite.modules.benchmark} datasetId={datasetId} runKey={suite.generatedAt} />
+    </div>
+  );
+}
+
+function SalesCard({ state }: { state: ModuleState<SalesLensModuleResult> }) {
+  if (!state.available) return <Unavailable state={state} />;
+  const { sales } = state.result;
+  const t = sales.totals;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Sales lens</CardTitle>
+        <CardDescription className="mt-0.5">
+          Revenue, units, tickets and mix · refund rate {t.refund_pct ?? 0}%
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-4">
+        <div className="grid grid-cols-4 gap-3 text-center">
+          <Stat label="Revenue" value={t.revenue.toLocaleString()} />
+          <Stat label="Units" value={t.units.toLocaleString()} />
+          <Stat label="Avg ticket" value={t.avg_ticket?.toLocaleString() ?? "—"} />
+          <Stat label="Avg basket" value={t.avg_basket_units?.toLocaleString() ?? "—"} />
+        </div>
+        {sales.byRep && sales.byRep.length > 0 && (
+          <MiniRank title="By sales rep" rows={sales.byRep.slice(0, 4)} />
+        )}
+        {sales.byTeam && sales.byTeam.length > 0 && (
+          <MiniRank title="By team" rows={sales.byTeam.slice(0, 4)} />
+        )}
+        <p className="mt-3 text-xs text-faint">
+          {sales.monthly.slice(-3).map((m) => `${m.period} ${m.revenue.toLocaleString()}`).join(" · ")}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SupplierCard({ state }: { state: ModuleState<SupplierModuleResult> }) {
+  if (!state.available) return <Unavailable state={state} />;
+  const { suppliers } = state.result;
+  const c = suppliers.concentration;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Supplier lens</CardTitle>
+        <CardDescription className="mt-0.5">
+          Spend {suppliers.totals.spend.toLocaleString()} · {suppliers.totals.suppliers} suppliers · top-3 {c.top3_share_pct ?? 0}%
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="overflow-x-auto p-0">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="border-b border-border bg-surface-subtle/60 text-left text-xs font-semibold uppercase tracking-wide text-muted">
+              <th className="px-4 py-2.5">Supplier</th>
+              <th className="px-4 py-2.5 text-right">Spend</th>
+              <th className="px-4 py-2.5 text-right">Share</th>
+              <th className="px-4 py-2.5 text-right">Orders</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/60">
+            {suppliers.suppliers.slice(0, 6).map((s) => (
+              <tr key={s.label}>
+                <td className="max-w-[200px] truncate px-4 py-2 font-medium text-foreground">{s.label}</td>
+                <td className="px-4 py-2 text-right tabular-nums">{s.spend.toLocaleString()}</td>
+                <td className="px-4 py-2 text-right tabular-nums">{s.share_pct ?? 0}%</td>
+                <td className="px-4 py-2 text-right tabular-nums">{s.orders}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GeographyCard({ state }: { state: ModuleState<GeographyModuleResult> }) {
+  if (!state.available) return <Unavailable state={state} />;
+  const { geography } = state.result;
+  const top = geography.cities.length > 0 ? geography.cities : geography.regions.length > 0 ? geography.regions : geography.countries;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Geography lens</CardTitle>
+        <CardDescription className="mt-0.5">
+          {geography.totals.customers} customers · {geography.totals.revenue.toLocaleString()} revenue ·{" "}
+          {geography.markers.length > 0 ? `${geography.markers.length} map markers` : "no coordinates yet"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="overflow-x-auto p-0">
+        <MiniRank title={geography.cities.length > 0 ? "By city" : geography.regions.length > 0 ? "By region" : "By country"} rows={top.slice(0, 5)} />
+      </CardContent>
+    </Card>
+  );
+}
+
+function BudgetCard({ state }: { state: ModuleState<BudgetModuleResult> }) {
+  if (!state.available) return <Unavailable state={state} />;
+  const { budget } = state.result;
+  const t = budget.totals;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Budget vs actual</CardTitle>
+        <CardDescription className="mt-0.5">
+          Attainment {t.attainment_pct ?? 0}% · variance {t.variance > 0 ? "+" : ""}
+          {t.variance.toLocaleString()}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="overflow-x-auto p-0">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="border-b border-border bg-surface-subtle/60 text-left text-xs font-semibold uppercase tracking-wide text-muted">
+              <th className="px-4 py-2.5">Period / Category</th>
+              <th className="px-4 py-2.5 text-right">Budget</th>
+              <th className="px-4 py-2.5 text-right">Actual</th>
+              <th className="px-4 py-2.5 text-right">Attain</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/60">
+            {budget.rows.slice(0, 6).map((r) => (
+              <tr key={`${r.period}-${r.category ?? ""}`}>
+                <td className="max-w-[200px] truncate px-4 py-2 font-medium text-foreground">
+                  {r.period} {r.category ? `· ${r.category}` : ""}
+                </td>
+                <td className="px-4 py-2 text-right tabular-nums">{r.budget.toLocaleString()}</td>
+                <td className="px-4 py-2 text-right tabular-nums">{r.actual.toLocaleString()}</td>
+                <td className="px-4 py-2 text-right tabular-nums">{r.attainment_pct ?? 0}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function StocktakeCard({ state }: { state: ModuleState<StocktakeModuleResult> }) {
+  if (!state.available) return <Unavailable state={state} />;
+  const { stocktake } = state.result;
+  const t = stocktake.totals;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Stock count audit</CardTitle>
+        <CardDescription className="mt-0.5">
+          {t.mismatch_lines} of {stocktake.rows.length} lines differ · total variance {t.variance_units > 0 ? "+" : ""}
+          {t.variance_units.toLocaleString()} units
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="overflow-x-auto p-0">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="border-b border-border bg-surface-subtle/60 text-left text-xs font-semibold uppercase tracking-wide text-muted">
+              <th className="px-4 py-2.5">Product</th>
+              <th className="px-4 py-2.5 text-right">System</th>
+              <th className="px-4 py-2.5 text-right">Counted</th>
+              <th className="px-4 py-2.5 text-right">Δ</th>
+              <th className="px-4 py-2.5 text-right">Adj value</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/60">
+            {stocktake.adjusted.slice(0, 5).map((r) => (
+              <tr key={`${r.product}-${r.batch ?? ""}`}>
+                <td className="max-w-[180px] truncate px-4 py-2 font-medium text-foreground">{r.product}</td>
+                <td className="px-4 py-2 text-right tabular-nums">{r.system_qty}</td>
+                <td className="px-4 py-2 text-right tabular-nums">{r.counted_qty}</td>
+                <td className="px-4 py-2 text-right tabular-nums">{r.variance > 0 ? "+" : ""}{r.variance}</td>
+                <td className="px-4 py-2 text-right tabular-nums">{r.adjustment_value?.toLocaleString() ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {stocktake.adjusted.length === 0 && (
+          <p className="px-4 py-2 text-xs text-faint">No adjustments — counts match the system.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-surface-subtle/50 p-2">
+      <p className="text-lg font-semibold tabular-nums text-foreground">{value}</p>
+      <p className="text-xs text-muted">{label}</p>
+    </div>
+  );
+}
+
+function MiniRank({ title, rows }: { title: string; rows: SalesRankRow[] }) {
+  return (
+    <div className="mt-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">{title}</p>
+      <div className="mt-1 flex flex-col gap-1">
+        {rows.map((r) => (
+          <div key={r.label} className="flex items-center gap-2 text-sm">
+            <span className="w-full max-w-[160px] truncate text-foreground">{r.label}</span>
+            <span className="ml-auto shrink-0 tabular-nums text-muted">{r.value.toLocaleString()}</span>
+            <span className="w-8 shrink-0 text-right tabular-nums text-faint">{r.share_pct ?? 0}%</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

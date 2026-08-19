@@ -6,6 +6,11 @@ import { runSafetyStock } from "./safety-stock";
 import { runExpiry, type DemandForProduct, type InventoryLine } from "./expiry";
 import { runForecast, type ForecastPoint } from "./forecast";
 import { dailyRollups, categoryRollups } from "./benchmark";
+import { runSalesLens } from "./sales";
+import { runSupplierLens, type PurchaseLine } from "./supplier";
+import { runGeography, type GeoLine } from "./geography";
+import { runBudget, type BudgetLine } from "./budget";
+import { runStocktake, type StocktakeLine, type SystemStockLine } from "./stocktake";
 
 /**
  * Deterministic pharmacy analytics orchestrator.
@@ -46,6 +51,26 @@ export interface BenchmarkModuleResult {
   hashed_patients: boolean;
 }
 
+export interface SalesLensModuleResult {
+  sales: ReturnType<typeof runSalesLens>;
+}
+
+export interface SupplierModuleResult {
+  suppliers: ReturnType<typeof runSupplierLens>;
+}
+
+export interface GeographyModuleResult {
+  geography: ReturnType<typeof runGeography>;
+}
+
+export interface BudgetModuleResult {
+  budget: ReturnType<typeof runBudget>;
+}
+
+export interface StocktakeModuleResult {
+  stocktake: ReturnType<typeof runStocktake>;
+}
+
 export interface PharmacySuite {
   generatedAt: string;
   kind: DatasetKind | null;
@@ -53,6 +78,11 @@ export interface PharmacySuite {
   columns: { key: string; label: string; type: string }[];
   roleMap: Partial<Record<ColumnRole, string>>;
   modules: {
+    sales: ModuleState<SalesLensModuleResult>;
+    supplier: ModuleState<SupplierModuleResult>;
+    geography: ModuleState<GeographyModuleResult>;
+    budget: ModuleState<BudgetModuleResult>;
+    stocktake: ModuleState<StocktakeModuleResult>;
     rfm: ModuleState<RfmModuleResult>;
     basket: ModuleState<BasketModuleResult>;
     abcXyz: ModuleState<ReturnType<typeof runAbcXyz>>;
@@ -82,9 +112,19 @@ export interface ProjectedRows {
     amount: number;
     units: number;
     branch: string | null;
+    refunded: boolean;
+    rep: string | null;
+    team: string | null;
     raw: Record<string, unknown>;
   }[];
   inventory: InventoryLine[];
+  purchases: PurchaseLine[];
+  geo: GeoLine[];
+  budgets: BudgetLine[];
+  stocktake: {
+    counts: StocktakeLine[];
+    system: SystemStockLine[];
+  };
 }
 
 // Column-key fallbacks used when a role is not stamped on the defs (older
@@ -105,6 +145,23 @@ const KEY_FALLBACKS: Record<ColumnRole, string[]> = {
   tax: ["tax", "vat", "tva"],
   account: ["account", "compte"],
   patient: ["patient", "patient_id", "mrid", "dossier", "numpatient"],
+  supplier: ["supplier", "distributor", "fournisseur", "grossiste", "wholesaler", "vendor"],
+  purchase_date: ["purchase_date", "date_de_l_achat", "order_date", "datefacture"],
+  purchase_qty: ["purchase_qty", "qty_purchased", "received_qty", "quantity_purchased"],
+  purchase_cost: ["purchase_cost", "purchase_price", "buy_price", "prix_achat"],
+  purchase_order: ["purchase_order", "po_number", "po", "purchase_order_no"],
+  city: ["city", "ville", "town", "المدينة"],
+  country: ["country", "pays", "land", "البلد"],
+  region: ["region", "governorate", "district", "province", "محافظة", "منطقة"],
+  latitude: ["latitude", "lat", "عرض"],
+  longitude: ["longitude", "lng", "lon", "طول"],
+  budget: ["budget", "target", "target_amount", "plan_amount", "الهدف", "الميزانية"],
+  opening_stock: ["opening_stock", "opening", "stock_of_beginning", "purchases", "أول_المدة"],
+  closing_stock: ["closing_stock", "closing", "ending_inventory", "stock_of_end", "آخر_المدة"],
+  batch: ["batch", "batch_no", "lot", "lot_no", "الدفعة", "تشغيلة"],
+  counted_qty: ["counted_qty", "physical_count", "qty_counted", "كمية_الجرد", "العدد_الفعلي"],
+  sales_rep: ["sales_rep", "sales_person", "representative", "مندوب_المبيعات"],
+  sales_team: ["sales_team", "team", "sales_region", "فريق_المبيعات"],
 };
 
 /** Resolve a column key for a role: explicit role map → def.role → key fallback. */
@@ -119,8 +176,12 @@ export function resolveRoleKey(
   if (stamped) return stamped.key;
   const norm = (s: string) =>
     s.toLowerCase().replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "");
+  // A column already stamped with a *different* role must not be reused for
+  // this role via label/key fallback (e.g. a purchase_qty column labelled
+  // "Qty" must not resolve as the sales `qty` role).
+  const fallbackPool = defs.filter((c) => !c.role || c.role === role);
   for (const candidate of KEY_FALLBACKS[role]) {
-    const hit = defs.find((c) => norm(c.key) === norm(candidate) || norm(c.label) === norm(candidate));
+    const hit = fallbackPool.find((c) => norm(c.key) === norm(candidate) || norm(c.label) === norm(candidate));
     if (hit) return hit.key;
   }
   return null;
@@ -168,6 +229,22 @@ export function projectRows(
   const revenueKey = key("revenue");
   const patientKey = key("patient");
   const branchKey = key("branch");
+  const refundKey = key("refund");
+  const repKey = key("sales_rep");
+  const teamKey = key("sales_team");
+  const supplierKey = key("supplier");
+  const purchaseDateKey = key("purchase_date");
+  const purchaseQtyKey = key("purchase_qty");
+  const purchaseCostKey = key("purchase_cost");
+  const purchaseOrderKey = key("purchase_order");
+  const cityKey = key("city");
+  const countryKey = key("country");
+  const regionKey = key("region");
+  const latKey = key("latitude");
+  const lngKey = key("longitude");
+  const budgetKey = key("budget");
+  const countedKey = key("counted_qty");
+  const batchKey = key("batch");
 
   const expiryKey = resolveInventoryColumn(defs, "expiry_date");
   const stockKey = resolveInventoryColumn(defs, "stock_on_hand");
@@ -179,32 +256,103 @@ export function projectRows(
     const amtPrice = unitPriceKey ? num(raw[unitPriceKey]) * units : 0;
     const amount = revenueKey ? amtRevenue : amtPrice;
     const product = (raw[productKey ?? ""] as string) ?? "(no product)";
+    const refunded =
+      (refundKey && raw[refundKey] != null && raw[refundKey] !== "" && Number(num(raw[refundKey])) !== 0) ||
+      amount < 0 ||
+      units < 0;
+    const str = (v: unknown): string | null => (v == null || v === "" ? null : String(v));
     return {
-      customer_id: patientKey && raw[patientKey] != null && raw[patientKey] !== "" ? String(raw[patientKey]) : null,
-      date: dateKey ? (String(raw[dateKey] ?? "")) : "",
-      transaction_id: txnKey && raw[txnKey] != null ? String(raw[txnKey]) : null,
+      customer_id: str(raw[patientKey ?? ""]),
+      date: dateKey ? String(raw[dateKey] ?? "") : "",
+      transaction_id: str(raw[txnKey ?? ""]),
       product,
-      category: categoryKey && raw[categoryKey] != null ? String(raw[categoryKey]) : null,
+      category: str(raw[categoryKey ?? ""]),
       amount,
       units,
-      branch: branchKey && raw[branchKey] != null ? String(raw[branchKey]) : null,
+      branch: str(raw[branchKey ?? ""]),
+      refunded,
+      rep: str(raw[repKey ?? ""]),
+      team: str(raw[teamKey ?? ""]),
       raw,
     };
   });
 
-  const hasInventory = expiryKey !== null || stockKey !== null;
+const hasInventory = expiryKey !== null || stockKey !== null;
   const inventory: InventoryLine[] = hasInventory
     ? rows.map((raw) => ({
         product: String(raw[productKey ?? ""] ?? "(no product)"),
         sku: raw[resolveRoleKey(defs, "sku", roles) ?? ""] != null ? String(raw[resolveRoleKey(defs, "sku", roles) ?? ""]) : null,
-        batch: null,
+        batch: batchKey && raw[batchKey] != null ? String(raw[batchKey]) : null,
         expiry_date: expiryKey ? (raw[expiryKey] != null ? String(raw[expiryKey]) : null) : null,
         stock_on_hand: stockKey ? num(raw[stockKey]) : 0,
         unit_cost: costKey ? num(raw[costKey]) : null,
       }))
     : [];
 
-  return { sales, inventory };
+  const purchases: PurchaseLine[] = rows.map((raw) => {
+    const qty = purchaseQtyKey ? num(raw[purchaseQtyKey]) : 0;
+    const unitCost = purchaseCostKey ? num(raw[purchaseCostKey]) : null;
+    const cost = unitCost !== null ? (purchaseQtyKey ? unitCost * qty : unitCost) : 0;
+    const str = (v: unknown): string | null => (v == null || v === "" ? null : String(v));
+    return {
+      supplier: str(raw[supplierKey ?? ""]),
+      date: purchaseDateKey ? String(raw[purchaseDateKey] ?? "") : "",
+      order: str(raw[purchaseOrderKey ?? ""]),
+      product: str(raw[productKey ?? ""]),
+      qty,
+      cost,
+      unit_cost: unitCost,
+    };
+  });
+
+  const str = (v: unknown): string | null => (v == null || v === "" ? null : String(v));
+  const numOrNull = (v: unknown): number | null => {
+    if (v == null || v === "") return null;
+    const n = num(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  const geo: GeoLine[] = rows.map((raw) => ({
+    city: str(raw[cityKey ?? ""]),
+    region: str(raw[regionKey ?? ""]),
+    country: str(raw[countryKey ?? ""]),
+    lat: numOrNull(raw[latKey ?? ""]),
+    lng: numOrNull(raw[lngKey ?? ""]),
+    customer: str(raw[patientKey ?? ""]),
+    amount: revenueKey ? num(raw[revenueKey]) : unitPriceKey ? num(raw[unitPriceKey]) * (qtyKey ? num(raw[qtyKey]) : 1) : 0,
+    units: qtyKey ? num(raw[qtyKey]) : 0,
+  }));
+
+  const periodIfAny = (d: unknown): string => (d == null || d === "" ? "" : String(d).slice(0, 7));
+  const budgets: BudgetLine[] = rows
+    .filter((raw) => budgetKey && raw[budgetKey] != null && raw[budgetKey] !== "")
+    .map((raw) => ({
+      period: dateKey ? periodIfAny(raw[dateKey]) : "",
+      category: str(raw[categoryKey ?? ""]),
+      branch: str(raw[branchKey ?? ""]),
+      budget: num(raw[budgetKey ?? ""]),
+      actual: revenueKey ? num(raw[revenueKey]) : 0,
+      units: qtyKey ? num(raw[qtyKey]) : 0,
+    }));
+
+  const counts: StocktakeLine[] = countedKey
+    ? rows
+        .filter((raw) => raw[countedKey] != null && raw[countedKey] !== "")
+        .map((raw) => ({
+          product: String(raw[productKey ?? ""] ?? "(no product)"),
+          batch: str(raw[batchKey ?? ""]),
+          counted_qty: num(raw[countedKey]),
+        }))
+    : [];
+  const system: SystemStockLine[] = rows
+    .filter((raw) => (stockKey && raw[stockKey] != null && raw[stockKey] !== "") || countedKey)
+    .map((raw) => ({
+      product: String(raw[productKey ?? ""] ?? "(no product)"),
+      batch: str(raw[batchKey ?? ""]),
+      system_qty: stockKey ? num(raw[stockKey]) : 0,
+      unit_cost: costKey ? num(raw[costKey]) : null,
+    }));
+
+  return { sales, inventory, purchases, geo, budgets, stocktake: { counts, system } };
 }
 
 /** Distinct transactions per day + amount per line, for basket + benchmark. */
@@ -375,6 +523,71 @@ export function buildSuite(
     };
   }
 
+  // ---- Sales lens (تحليل البيع) ----
+  let salesLens: ModuleState<SalesLensModuleResult>;
+  if (!qtyKey && !revenueKey && !unitPriceKey) {
+    salesLens = { available: false, reason: "Sales lens needs a qty, revenue, or unit-price column." };
+  } else {
+    salesLens = {
+      available: true,
+      result: {
+        sales: runSalesLens(
+          sales.map((l) => ({
+            date: String(l.date),
+            product: l.product,
+            category: l.category,
+            amount: l.amount,
+            units: l.units,
+            transaction_id: l.transaction_id,
+            refunded: l.refunded,
+            rep: l.rep,
+            team: l.team,
+          })),
+        ),
+      },
+    };
+  }
+
+  // ---- Supplier lens (تحليل الموردين) ----
+  let supplier: ModuleState<SupplierModuleResult>;
+  const supplierKey = resolveRoleKey(defs, "supplier", roles) ?? null;
+  if (!supplierKey) {
+    supplier = { available: false, reason: "Supplier lens needs a supplier/distributor column (purchases sheet)." };
+  } else {
+    supplier = { available: true, result: { suppliers: runSupplierLens(projected.purchases) } };
+  }
+
+  // ---- Geography lens (تحليل جغرافي) ----
+  const cityRole = resolveRoleKey(defs, "city", roles) ?? null;
+  const countryRole = resolveRoleKey(defs, "country", roles) ?? null;
+  const regionRole = resolveRoleKey(defs, "region", roles) ?? null;
+  const latRole = resolveRoleKey(defs, "latitude", roles) ?? null;
+  const lngRole = resolveRoleKey(defs, "longitude", roles) ?? null;
+  let geography: ModuleState<GeographyModuleResult>;
+  if (!cityRole && !countryRole && !regionRole && (!latRole || !lngRole)) {
+    geography = { available: false, reason: "Geography lens needs a city, region, country, or lat/lng column." };
+  } else {
+    geography = { available: true, result: { geography: runGeography(projected.geo) } };
+  }
+
+  // ---- Budget lens (الموازنات المالية) ----
+  let budget: ModuleState<BudgetModuleResult>;
+  const budgetRole = resolveRoleKey(defs, "budget", roles) ?? null;
+  if (!budgetRole) {
+    budget = { available: false, reason: "Budget lens needs a budget/target column (budget sheet)." };
+  } else {
+    budget = { available: true, result: { budget: runBudget(projected.budgets) } };
+  }
+
+  // ---- Stock-count lens (الجرد الفعلي) ----
+  const countedRole = resolveRoleKey(defs, "counted_qty", roles) ?? null;
+  let stocktake: ModuleState<StocktakeModuleResult>;
+  if (!countedRole) {
+    stocktake = { available: false, reason: "Stock count lens needs a counted-qty column (count sheet)." };
+  } else {
+    stocktake = { available: true, result: { stocktake: runStocktake(projected.stocktake.counts, projected.stocktake.system) } };
+  }
+
   const roleMap: Partial<Record<ColumnRole, string>> = {
     date: dateKey ?? undefined,
     transaction_id: txnKey ?? undefined,
@@ -386,6 +599,23 @@ export function buildSuite(
     cost: costKey ?? undefined,
     patient: patientKey ?? undefined,
     branch: resolveRoleKey(defs, "branch", roles) ?? undefined,
+    supplier: resolveRoleKey(defs, "supplier", roles) ?? undefined,
+    purchase_date: resolveRoleKey(defs, "purchase_date", roles) ?? undefined,
+    purchase_qty: resolveRoleKey(defs, "purchase_qty", roles) ?? undefined,
+    purchase_cost: resolveRoleKey(defs, "purchase_cost", roles) ?? undefined,
+    purchase_order: resolveRoleKey(defs, "purchase_order", roles) ?? undefined,
+    city: resolveRoleKey(defs, "city", roles) ?? undefined,
+    country: resolveRoleKey(defs, "country", roles) ?? undefined,
+    region: resolveRoleKey(defs, "region", roles) ?? undefined,
+    latitude: resolveRoleKey(defs, "latitude", roles) ?? undefined,
+    longitude: resolveRoleKey(defs, "longitude", roles) ?? undefined,
+    budget: resolveRoleKey(defs, "budget", roles) ?? undefined,
+    opening_stock: resolveRoleKey(defs, "opening_stock", roles) ?? undefined,
+    closing_stock: resolveRoleKey(defs, "closing_stock", roles) ?? undefined,
+    batch: resolveRoleKey(defs, "batch", roles) ?? undefined,
+    counted_qty: resolveRoleKey(defs, "counted_qty", roles) ?? undefined,
+    sales_rep: resolveRoleKey(defs, "sales_rep", roles) ?? undefined,
+    sales_team: resolveRoleKey(defs, "sales_team", roles) ?? undefined,
   };
 
   return {
@@ -394,6 +624,6 @@ export function buildSuite(
     rows: rows.length,
     columns: defs.map((c) => ({ key: c.key, label: c.label, type: c.type })),
     roleMap,
-    modules: { rfm, basket, abcXyz, safetyStock, expiry, forecast, benchmark },
+    modules: { sales: salesLens, supplier, geography, budget, stocktake, rfm, basket, abcXyz, safetyStock, expiry, forecast, benchmark },
   };
 }

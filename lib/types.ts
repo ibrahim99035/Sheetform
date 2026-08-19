@@ -1,5 +1,26 @@
 export type ColumnType = "string" | "numeric" | "date" | "boolean";
 
+/** What a dataset represents. Sales = POS transactions; inventory = stock
+ * snapshots (expiry + stock_on_hand), feeding ABC-XYZ / safety-stock / expiry
+ * analytics. */
+export type DatasetKind = "sales" | "inventory";
+
+/** A row in an inventory dataset (datasets.kind = 'inventory'). */
+export interface InventoryRow {
+  product: string;
+  sku?: string | null;
+  expiry_date: string | null;
+  stock_on_hand: number | null;
+  unit_cost?: number | null;
+}
+
+/** Tenant opt-in for anonymized cross-pharmacy benchmarking. */
+export interface BenchmarkOptIn {
+  enabled: boolean;
+  region?: string | null;
+  optedInAt?: string | null;
+}
+
 export type ColumnRole =
   | "date"
   | "branch"

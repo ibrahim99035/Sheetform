@@ -25,9 +25,16 @@ import { useSupabase } from "@/lib/supabase/provider";
 import { DataTable } from "@/components/data-table";
 import { AnalyzeTab } from "@/components/analyze-tab";
 import { EngineTab } from "@/components/engine-tab";
+import { BackupPanel } from "@/components/backup-panel";
 import { ActivityTab } from "@/components/activity-tab";
 import { StatusBadge } from "@/components/status-badge";
-import { applyOperation, redoOperation, undoOperation } from "@/lib/dataset-api";
+import { loadDataset } from "@/lib/db/opfs";
+import {
+  createDataStore,
+  createSupabaseStore,
+  type DataStore,
+} from "@/lib/datastore";
+import { ensureLocalDataset } from "@/lib/actions/dataset-local";
 import { retryImport } from "@/lib/actions/datasets";
 import { makeStorageKey, coerceValue } from "@/lib/coerce";
 import { viewSignature } from "@/lib/view";
@@ -93,6 +100,18 @@ export function DatasetWorkspace({
   const [busyOp, setBusyOp] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
 
+  // Local-first data plane: once OPFS can host the dataset we route every row
+  // read and every operation through DuckDB; otherwise we stay on the server
+  // RPC path (supabaseStore) as the fallback.
+  const [localState, setLocalState] = useState<
+    { engine: "duckdb" | "supabase"; ready: boolean; cached: boolean } | undefined
+  >(undefined);
+
+  const store: DataStore = useMemo(() => {
+    if (localState?.engine === "duckdb") return createDataStore(supabase);
+    return createSupabaseStore(supabase);
+  }, [localState, supabase]);
+
   const columns = ds.column_defs;
   const activeFilters = view.filters.length > 0;
   const sig = viewSignature(view);
@@ -103,13 +122,58 @@ export function DatasetWorkspace({
     queryClient.invalidateQueries({ queryKey: ["stats", ds.id] });
     queryClient.invalidateQueries({ queryKey: ["ops", ds.id] });
     queryClient.invalidateQueries({ queryKey: ["groupby", ds.id] });
+    queryClient.invalidateQueries({ queryKey: ["local-rows", ds.id] });
   }, [queryClient, ds.id]);
+
+  // Keep the column list in sync after ops that change the schema (rename /
+  // add column). Local engine reads the OPFS snapshot; otherwise the server row.
+  const refreshColumns = useCallback(async () => {
+    if (localState?.engine === "duckdb") {
+      const snap = await loadDataset(ds.id);
+      if (snap && Array.isArray(snap.columnDefs) && snap.columnDefs.length > 0) {
+        setDs((prev) => ({ ...prev, column_defs: snap.columnDefs }));
+      }
+      return;
+    }
+    const { data } = await supabase
+      .from("datasets")
+      .select("column_defs")
+      .eq("id", ds.id)
+      .maybeSingle();
+    if (data && Array.isArray(data.column_defs)) {
+      setDs((prev) => ({ ...prev, column_defs: data.column_defs as Dataset["column_defs"] }));
+    }
+  }, [localState, ds.id, supabase]);
+
+  // Local ingestion: snapshot the dataset into OPFS once so DuckDB can serve it.
+  useEffect(() => {
+    let alive = true;
+    let cancelled = false;
+    (async () => {
+      const res = await ensureLocalDataset(
+        supabase,
+        ds.id,
+        ds.column_defs,
+        ds.original_filename,
+        { expectedRowCount: ds.row_count },
+      );
+      if (!alive || cancelled) return;
+      if (res.ok) {
+        setLocalState({ engine: "duckdb", ready: true, cached: res.cached });
+      } else {
+        setLocalState({ engine: "supabase", ready: true, cached: false });
+      }
+    })();
+    return () => {
+      alive = false;
+      cancelled = true;
+    };
+  }, [supabase, ds.id, ds.column_defs, ds.original_filename, ds.row_count]);
 
   // Real-time status sync during/after import
   useEffect(() => {
     const channel = supabase
-      .channel(`dataset-${ds.id}`)
-      .on(
+      .channel(`dataset-${ds.id}`)      .on(
         "postgres_changes",
         {
           event: "UPDATE",
@@ -140,7 +204,7 @@ export function DatasetWorkspace({
 
   const handleUndo = useCallback(async () => {
     setBusyOp("undo");
-    const res = await undoOperation(supabase, ds.id);
+    const res = await store.undoOperation(ds.id);
     setBusyOp(null);
     if (!res.ok) {
       toast({ kind: "error", text: res.error ?? "Nothing to undo" });
@@ -148,11 +212,11 @@ export function DatasetWorkspace({
     }
     invalidateDataset();
     toast({ text: "Undid last operation" });
-  }, [supabase, ds.id, invalidateDataset, toast]);
+  }, [store, ds.id, invalidateDataset, toast]);
 
   const handleRedo = useCallback(async () => {
     setBusyOp("redo");
-    const res = await redoOperation(supabase, ds.id);
+    const res = await store.redoOperation(ds.id);
     setBusyOp(null);
     if (!res.ok) {
       toast({ kind: "error", text: res.error ?? "Nothing to redo" });
@@ -160,7 +224,7 @@ export function DatasetWorkspace({
     }
     invalidateDataset();
     toast({ text: "Redid operation" });
-  }, [supabase, ds.id, invalidateDataset, toast]);
+  }, [store, ds.id, invalidateDataset, toast]);
 
   const handleUndoRef = useRef(handleUndo);
   useEffect(() => {
@@ -188,12 +252,13 @@ export function DatasetWorkspace({
     async (operation: string, params: Record<string, unknown>, okMessage?: string) => {
       setBusyOp(operation);
       try {
-        const res = await applyOperation(supabase, ds.id, operation, params);
+        const res = await store.applyOperation(ds.id, operation, params);
         if (!res.ok) {
           toast({ kind: "error", text: res.error ?? "Operation failed" });
           return;
         }
         invalidateDataset();
+        await refreshColumns();
         toast({
           text: okMessage ?? res.message ?? "Done",
           action: { label: "Undo", onClick: () => handleUndoRef.current() },
@@ -204,7 +269,7 @@ export function DatasetWorkspace({
         setBusyOp(null);
       }
     },
-    [supabase, ds.id, invalidateDataset, toast],
+    [store, ds.id, invalidateDataset, refreshColumns, toast],
   );
 
   const handleCommitCell = useCallback(
@@ -297,6 +362,28 @@ export function DatasetWorkspace({
     );
   };
 
+  const [addColOpen, setAddColOpen] = useState(false);
+  const [addColLabel, setAddColLabel] = useState("");
+  const [addColType, setAddColType] = useState<"numeric" | "text" | "date" | "boolean">("numeric");
+  const [addColFormula, setAddColFormula] = useState("");
+
+  const submitAddColumn = () => {
+    if (!addColLabel.trim()) return;
+    runOp(
+      "add_column",
+      {
+        label: addColLabel.trim(),
+        type: addColType,
+        formula: addColFormula.trim() || undefined,
+      },
+      addColFormula.trim() ? "Column added with formula" : "Column added",
+    );
+    setAddColOpen(false);
+    setAddColLabel("");
+    setAddColFormula("");
+    setAddColType("numeric");
+  };
+
   const busy = busyOp !== null;
 
   const exportHref = useMemo(
@@ -330,6 +417,11 @@ export function DatasetWorkspace({
             {ds.original_filename}
             {ds.sheet_name ? ` · ${ds.sheet_name}` : ""} ·{" "}
             {ds.row_count.toLocaleString()} imported rows
+            {localState?.engine === "duckdb" && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-brand/25 bg-brand-subtle px-2 py-0.5 text-xs font-medium text-brand">
+                Local engine · DuckDB + OPFS
+              </span>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -542,6 +634,10 @@ export function DatasetWorkspace({
               <CopyX className="h-3.5 w-3.5" />
               Remove duplicates…
             </Button>
+            <Button onClick={() => setAddColOpen(true)} disabled={busy} size="sm" title="Add a blank typed column or a computed formula column">
+              <Plus className="h-3.5 w-3.5" />
+              Add column…
+            </Button>
           </div>
 
           {ds.status === "ready" && (
@@ -551,6 +647,7 @@ export function DatasetWorkspace({
               view={view}
               onViewChange={setView}
               onCommitCell={handleCommitCell}
+              store={localState?.engine === "duckdb" ? store : undefined}
             />
           )}
         </div>
@@ -562,16 +659,24 @@ export function DatasetWorkspace({
           columns={ds.column_defs}
           initialStats={initialStats}
           onAddBlock={onAddBlock}
+          store={localState?.engine === "duckdb" ? store : undefined}
         />
       )}
 
       {tab === "engine" && ds.status === "ready" && (
-        <EngineTab
-          datasetId={ds.id}
-          datasetName={ds.name}
-          initialReport={initialReport ?? null}
-          onAddBlock={onAddBlock}
-        />
+        <div className="space-y-4">
+          <BackupPanel
+            datasetId={ds.id}
+            fileName={ds.original_filename ?? ds.name}
+            columns={ds.column_defs}
+          />
+          <EngineTab
+            datasetId={ds.id}
+            datasetName={ds.name}
+            initialReport={initialReport ?? null}
+            onAddBlock={onAddBlock}
+          />
+        </div>
       )}
 
       {tab === "activity" && (
@@ -662,6 +767,74 @@ export function DatasetWorkspace({
             </Button>
             <Button onClick={submitDedupe} variant="primary" size="sm">
               Remove duplicates
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Add column dialog */}
+      <Dialog
+        open={addColOpen}
+        onClose={() => setAddColOpen(false)}
+        title="Add column"
+        description="Create a blank typed column, or a computed one with a simple arithmetic formula (e.g. qty * unit_price)."
+      >
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="add-col-label">Column name</Label>
+            <Input
+              id="add-col-label"
+              value={addColLabel}
+              onChange={(e) => setAddColLabel(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submitAddColumn();
+              }}
+              placeholder="e.g. Gross margin"
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="add-col-type">Type</Label>
+            <Select
+              id="add-col-type"
+              value={addColType}
+              onChange={(e) => setAddColType(e.target.value as typeof addColType)}
+            >
+              <option value="numeric">Number</option>
+              <option value="text">Text</option>
+              <option value="date">Date</option>
+              <option value="boolean">Yes / No</option>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="add-col-formula">
+              Formula <span className="font-normal text-faint">(optional)</span>
+            </Label>
+            <Input
+              id="add-col-formula"
+              value={addColFormula}
+              onChange={(e) => setAddColFormula(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submitAddColumn();
+              }}
+              placeholder="qty * unit_price − cost"
+              className="font-mono"
+            />
+            <p className="text-xs text-faint">
+              Only column names, numbers and + − * / ( ) are allowed — no functions.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setAddColOpen(false)} size="sm">
+              Cancel
+            </Button>
+            <Button
+              onClick={submitAddColumn}
+              disabled={!addColLabel.trim()}
+              variant="primary"
+              size="sm"
+            >
+              Add column
             </Button>
           </div>
         </div>

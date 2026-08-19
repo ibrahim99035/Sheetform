@@ -155,6 +155,7 @@ Storage: private bucket `uploads`, object path `{owner_id}/...`.
 | `scripts/deliver-reports.mjs` | Local/CI mirror of the `deliver-reports` Edge Function: claims queued deliveries, renders KPI body, sends via Resend / Meta WhatsApp (or dry-runs when `DRY_RUN=1`, the default) |
 | `scripts/e2e-compliance.mjs` | Phase-5 compliance e2e (retention_policies seed/RLS, `_sf_retention_months`/purge eligibility, archive→purge soft/hard, `purge_expired` dry+real sweep, DSR export/delete/reject + RLS, terms accept idempotence) |
 | `scripts/e2e-reports.mjs` | Reports-workflow e2e (operator publish → RLS read side → snapshot KPIs → queue/retry deliveries → revise; non-superadmin FORBIDDEN asserted on every operator RPC) |
+| `e2e/` (`npm run test:e2e`) | Committed Playwright suite (`@playwright/test`, reuses a running `npm run dev` or `E2E_BASE_URL`): COI/COEP isolation check (`crossOriginIsolated`, DuckDB COI bundle + worker assets served, CSP wasm/worker directives when present), public shell smoke, viewport-overflow matrix. Auth-gated specs run only when `E2E_EMAIL`/`E2E_PASSWORD` are set |
 
 ## Environment
 

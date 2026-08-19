@@ -6,13 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "postinstall": "node scripts/copy-duckdb-assets.mjs",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
     "check": "npm run lint && npm run typecheck && npm run test"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.33.1-dev57.0",
     "@sentry/nextjs": "^10.70.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.2",
@@ -22,6 +26,8 @@
     "@tiptap/pm": "^3.30.1",
     "@tiptap/react": "^3.30.1",
     "@tiptap/starter-kit": "^3.30.1",
+    "ag-grid-community": "^36.1.0",
+    "ag-grid-react": "^36.1.0",
     "lucide-react": "^1.31.0",
     "next": "16.3.0",
     "papaparse": "^5.5.4",
@@ -33,6 +39,7 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/papaparse": "^5.5.2",

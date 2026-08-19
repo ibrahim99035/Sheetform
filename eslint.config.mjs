@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Deno Edge Functions — linted by the Supabase CLI/Deno toolchain instead.
     "supabase/functions/**",
+    // DuckDB-WASM bundles copied to public (scripts/copy-duckdb-assets.mjs)
+    // are minified third-party assets — not project source.
+    "public/duckdb/**",
   ]),
 ]);
 

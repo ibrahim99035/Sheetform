@@ -13,6 +13,8 @@ import {
 } from "recharts";
 import { useSupabase } from "@/lib/supabase/provider";
 import { fetchGroupBy } from "@/lib/dataset-api";
+import { loadDataset } from "@/lib/db/opfs";
+import type { DataStore } from "@/lib/datastore";
 import { formatNumber } from "@/lib/view";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -21,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { PharmacyModules } from "@/components/pharmacy-modules";
 import type { ColumnDef, ColumnStats } from "@/lib/types";
 import type { ReportBlockContent } from "@/lib/actions/report-blocks";
 
@@ -29,6 +32,9 @@ interface AnalyzeTabProps {
   columns: ColumnDef[];
   initialStats: ColumnStats[];
   onAddBlock?: (block: ReportBlockContent) => void;
+  /** Local-first store (DuckDB+OPFS) — group-by and column stats recompute
+   *  against the live local table when provided, so edits re-trigger analytics. */
+  store?: DataStore;
 }
 
 const NUMERIC_OPS = ["count", "sum", "avg"] as const;
@@ -40,13 +46,16 @@ const TYPE_DOT: Record<string, string> = {
   boolean: "bg-success",
 };
 
-export function AnalyzeTab({ datasetId, columns, initialStats, onAddBlock }: AnalyzeTabProps) {
+export function AnalyzeTab({ datasetId, columns, initialStats, onAddBlock, store }: AnalyzeTabProps) {
   const supabase = useSupabase();
 
   const { data: stats } = useQuery({
-    queryKey: ["stats", datasetId],
+    queryKey: ["stats", datasetId, store?.engine ?? "supabase"],
     staleTime: 0,
     queryFn: async () => {
+      if (store) {
+        return store.computeStats(datasetId, columns);
+      }
       const { data, error } = await supabase
         .from("dataset_column_stats")
         .select("*")
@@ -71,16 +80,35 @@ export function AnalyzeTab({ datasetId, columns, initialStats, onAddBlock }: Ana
   const [minCount, setMinCount] = useState(1);
 
   const groupResult = useQuery({
-    queryKey: ["groupby", datasetId, groupCol, aggCol, aggFn, topN, minCount],
-    queryFn: () =>
-      fetchGroupBy(supabase, datasetId, {
+    queryKey: ["groupby", datasetId, store?.engine ?? "supabase", groupCol, aggCol, aggFn, topN, minCount],
+    queryFn: () => {
+      if (store) {
+        return store.fetchGroupBy(datasetId, {
+          group: groupCol,
+          agg: aggFn === "count" ? null : aggCol,
+          fn: aggFn,
+          topN,
+          minCount,
+        });
+      }
+      return fetchGroupBy(supabase, datasetId, {
         group: groupCol,
         agg: aggFn === "count" ? null : aggCol,
         fn: aggFn,
         topN,
         minCount,
-      }),
+      });
+    },
     enabled: groupCol !== "",
+  });
+
+  // Fresh local rows for the pharmacy modules when the DuckDB engine runs.
+  // The workspace invalidates ["local-rows", datasetId] after every op commit,
+  // so re-running analysis re-triggers against the edited local data.
+  const { data: localRows } = useQuery({
+    queryKey: ["local-rows", datasetId],
+    queryFn: async () => (await loadDataset(datasetId))?.rows ?? [],
+    enabled: store?.engine === "duckdb",
   });
 
   const chartData = useMemo(
@@ -236,6 +264,13 @@ export function AnalyzeTab({ datasetId, columns, initialStats, onAddBlock }: Ana
           </table>
         </CardContent>
       </Card>
+
+      {/* Pharmacy analytics (deterministic BI modules) */}
+      <PharmacyModules
+        datasetId={datasetId}
+        columns={columns}
+        localRows={store?.engine === "duckdb" ? localRows : null}
+      />
 
       {/* Group by */}
       <section>

@@ -2,43 +2,41 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { login, type AuthState } from "@/lib/actions/auth";
+import { resetPassword, type AuthState } from "@/lib/actions/auth";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-export function LoginForm() {
+export function ResetPasswordForm() {
   const [state, action, pending] = useActionState<AuthState, FormData>(
-    login,
+    resetPassword,
     undefined,
   );
 
   return (
     <form action={action} className="space-y-4">
       <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          autoFocus
-        />
-      </div>
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="password">Password</Label>
-          <Link href="/forgot-password" className="text-xs font-medium text-brand hover:underline">
-            Forgot password?
-          </Link>
-        </div>
+        <Label htmlFor="password">New password</Label>
         <Input
           id="password"
           name="password"
           type="password"
           required
-          autoComplete="current-password"
+          minLength={8}
+          autoComplete="new-password"
+          autoFocus
+        />
+        <p className="text-xs text-faint">At least 8 characters.</p>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="confirm">Confirm password</Label>
+        <Input
+          id="confirm"
+          name="confirm"
+          type="password"
+          required
+          minLength={8}
+          autoComplete="new-password"
         />
       </div>
       {state?.error && (
@@ -46,13 +44,17 @@ export function LoginForm() {
           {state.error}
         </p>
       )}
+      {state?.success && (
+        <p className="rounded-lg border border-success/25 bg-success-subtle px-3 py-2 text-sm text-success-text">
+          {state.success}
+        </p>
+      )}
       <Button type="submit" variant="primary" className="w-full" disabled={pending}>
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? "Updating…" : "Update password"}
       </Button>
       <p className="text-center text-sm text-muted">
-        No account?{" "}
-        <Link href="/signup" className="font-medium text-brand hover:underline">
-          Create one
+        <Link href="/login" className="font-medium text-brand hover:underline">
+          Back to sign in
         </Link>
       </p>
     </form>

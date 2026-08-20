@@ -23,7 +23,7 @@ export default async function AdminPage() {
     .not("data_requests", "is", null);
 
   const ownerIds = [...new Set((requestsData ?? []).map((r) => r.owner_id))];
-  let ownerEmails = new Map<string, string>();
+  const ownerEmails = new Map<string, string>();
   if (ownerIds.length > 0) {
     const { data: owners } = await supabase.auth.admin.listUsers();
     if (owners?.users) {

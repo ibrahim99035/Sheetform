@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { newRequestId, setRequestId, log } from "@/lib/log";
 
+const PROTECTED = ["/datasets", "/reports", "/applications", "/training", "/admin", "/org", "/settings", "/dashboard"];
+const AUTH_ONLY = ["/login", "/signup", "/forgot-password", "/reset-password"];
+
 export async function proxy(request: NextRequest) {
   const requestId = newRequestId();
   setRequestId(requestId);
@@ -32,20 +35,22 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-  const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup");
+  const path = request.nextUrl.pathname;
 
-  if (!user && !isAuthRoute && pathname.startsWith("/datasets")) {
-    log.info("redirect unauthenticated to /login", { path: pathname });
+  const isProtected = PROTECTED.some((prefix) => path.startsWith(prefix));
+  const isAuthOnly = AUTH_ONLY.some((prefix) => path.startsWith(prefix));
+
+  if (isProtected && !user) {
+    log.info("redirect unauthenticated to /login", { path });
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthRoute) {
-    log.info("redirect authenticated away from auth route", { path: pathname });
+  if (isAuthOnly && user) {
+    log.info("redirect authenticated away from auth route", { path });
     const url = request.nextUrl.clone();
-    url.pathname = "/datasets";
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 

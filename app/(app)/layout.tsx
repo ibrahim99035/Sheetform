@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText, FolderOpen, LogOut, Plus, ShieldCheck } from "lucide-react";
+import { FileText, FolderOpen, LogOut, Plus, Settings, ShieldCheck } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/admin";
@@ -29,9 +29,16 @@ export default async function AppLayout({
             </Link>
             <nav className="flex items-center gap-1 text-sm">
               <Link
+                href="/dashboard"
+                className="rounded-md px-3 py-2 text-muted transition hover:bg-surface-subtle hover:text-foreground sm:py-1.5"
+              >
+                Dashboard
+              </Link>
+              <Link
                 href="/datasets"
                 className="rounded-md px-3 py-2 text-muted transition hover:bg-surface-subtle hover:text-foreground sm:py-1.5"
               >
+                <FileText className="mr-1 inline h-3.5 w-3.5 sm:hidden" />
                 Datasets
               </Link>
               <Link
@@ -66,6 +73,14 @@ export default async function AppLayout({
                   <span className="hidden sm:inline">Admin</span>
                 </Link>
               )}
+              <Link
+                href="/settings"
+                aria-label="Settings"
+                className="flex h-10 w-10 items-center justify-center rounded-md text-muted transition hover:bg-surface-subtle hover:text-foreground sm:h-auto sm:w-auto sm:gap-1.5 sm:px-3 sm:py-1.5"
+              >
+                <Settings className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                <span className="hidden sm:inline">Settings</span>
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-2">

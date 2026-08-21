@@ -86,6 +86,17 @@ Columns:
 | P6.5 | PDF export: table renderer mirroring `renderMarkdown` tables | todo | | | | byte snapshot test |
 | P6.6 | CI: fail-fast + secret scan + build smoke test | todo | | | | CI green on PR |
 
+## Ad-hoc requests (user-directed work outside P2–P8)
+
+| Task | Title | Status | Date | Commit | Owner | Verification |
+|---|---|---|---|---|---|---|
+| AH-1 | Signup collects pharmacy details (name, license no/expiry, phone, address, full name) and auto-creates org + org_profile via `create_owner`/`submit_org_profile`; first login completes pending setup from user metadata | done | 2026-08-21 | — | opencode (ox-alpha) | `npx vitest run test/auth-signup.test.ts` (10 passed); full suite 169/169; tsc+eslint clean |
+| AH-2 | Settings page shows organization card: review status badge (pending/active/rejected/suspended), rejection reason, license-expiry warning, pharmacy profile summary, manage-org link; CTA when no org (`components/account-org-card.tsx`) | done | 2026-08-21 | — | opencode (ox-alpha) | full suite 169/169; tsc+eslint clean |
+| AH-3 | UI pass 1: active-route highlighting in app shell (`components/app-nav.tsx`, longest-prefix match + aria-current); landing page now renders all missing Arabic descriptions (services/how-it-works/features/benefits); fixed corrupted Arabic string + stray space | done | 2026-08-21 | — | opencode (ox-alpha) | full suite 169/169; tsc+eslint clean |
+| AH-4 | UI pass 2 (style+UX, all four directions): (a) token refresh — layered soft shadows (`--shadow-sm/md/lg`), `text-wrap: balance/pretty`, `.tabular-nums-all`; (b) route-level loading skeletons via shared `ListPageSkeleton` for datasets/reports/applications/dashboard/settings/org; (c) workspace polish — ARIA tabs w/ scroll, AG Grid quartz retuned to app tokens, table density toggle (localStorage via `useSyncExternalStore`); (d) bilingual infra — `lib/i18n.ts` EN/AR dict, `LanguageProvider`/`useLang`/`Trans`, `LanguageToggle` in both headers, nav/auth/settings chrome translated, `<html dir>` flips to rtl | done | 2026-08-21 | — | opencode (ox-alpha) | `npm run check`: lint 0 errors (112 pre-existing warnings), tsc clean, vitest 169/169 |
+
+| AH-5 | Colors & display pass: theme-aware categorical chart palette (`--chart-1..6` light+dark, mapped to Tailwind `--color-chart-*`), report-block charts switched from hardcoded hexes to tokens; dark theme neutrals refined from muddy green cast to charcoal-teal; Leaflet markers read resolved brand color (SVG attrs can't use CSS vars); tabular-nums on KPI strips + dataset row counts | done | 2026-08-21 | — | opencode (ox-alpha) | full suite 169/169; tsc clean; eslint 0 errors |
+
 ## Meta — the plan + ledger themselves
 
 | Task | Title | Status | Date | Commit | Owner | Verification |
@@ -96,6 +107,8 @@ Columns:
 ---
 
 ## Open questions / handoffs (add anything ambiguous here)
+
+- **Supabase project link mismatch (found 2026-08-21):** the app's `.env.local` points to `vhgkjxdwptirmyqjhiks.supabase.co`, but the Supabase CLI is linked to `tavfqvcokeixntpljyhy` — `supabase db push` has been applying migrations to the WRONG project. `vhgk…` is missing at least `20260819120000_dataset_service_coverage.sql` (upload fails: "Could not find the 'service_coverage' column"). Quick patch staged in `scripts/patch-vhgk-service-coverage.sql`; durable fix = `npx supabase link --project-ref vhgkjxdwptirmyqjhiks && npx supabase db push`. Needs an owner decision: which project is canonical?
 
 - **P6.4 blocked:** rotating the service-role key needs the owner of the secret /.env.local — assign an owner and document rotation in `docs/OPS.md` before unblocking.
 - **P5 seed copy:** Arabic body copy (9 lessons) should be drafted/approved with the client before the migration is written.

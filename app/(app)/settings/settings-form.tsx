@@ -7,6 +7,7 @@ import {
   updateDisplayName,
   type SettingsState,
 } from "@/lib/actions/settings";
+import { useLang } from "@/components/language-provider";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ export function SettingsForm({
   email: string;
   displayName: string;
 }) {
+  const { t } = useLang();
   const [emailState, emailAction, emailPending] = useActionState<SettingsState, FormData>(
     updateEmail,
     undefined,
@@ -52,12 +54,7 @@ export function SettingsForm({
   );
 
   return (
-    <div className="animate-slide-up space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Settings</h1>
-        <p className="mt-0.5 text-sm text-muted">Manage your account settings.</p>
-      </div>
-
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Display name</CardTitle>
@@ -76,7 +73,7 @@ export function SettingsForm({
             </div>
             <FormMessage state={nameState} />
             <Button type="submit" variant="secondary" size="sm" disabled={namePending}>
-              {namePending ? "Saving…" : "Save"}
+              {namePending ? t("settings.saving") : t("settings.save")}
             </Button>
           </form>
         </CardContent>

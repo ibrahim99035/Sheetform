@@ -66,7 +66,7 @@ export function UserDashboard({
               <TrendingUp className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-lg font-semibold text-foreground">{totalRows.toLocaleString()}</p>
+              <p className="text-lg font-semibold tabular-nums text-foreground">{totalRows.toLocaleString()}</p>
               <p className="text-xs text-muted">Total rows imported</p>
             </div>
           </CardContent>
@@ -77,7 +77,7 @@ export function UserDashboard({
               <BarChart3 className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-lg font-semibold text-foreground">{readyCount}/{datasets.length}</p>
+              <p className="text-lg font-semibold tabular-nums text-foreground">{readyCount}/{datasets.length}</p>
               <p className="text-xs text-muted">Ready datasets</p>
             </div>
           </CardContent>

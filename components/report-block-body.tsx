@@ -21,7 +21,15 @@ import { RichTextView } from "@/components/rich-text-view";
 
 export const CHART_TYPES = ["bar", "line", "area", "pie"];
 
-const CHART_COLORS = ["var(--brand)", "#f97316", "#10b981", "#8b5cf6", "#f43f5e", "#eab308", "#06b6d4"];
+// Categorical series colors — token-driven so charts adapt to light/dark.
+const CHART_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-6)",
+];
 
 type SeriesPoint = { bucket?: string; value?: number | null };
 

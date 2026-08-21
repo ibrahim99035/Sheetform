@@ -50,7 +50,7 @@ function KpiStrip({ kpis }: { kpis: OrgDashboardData["kpis"] }) {
               <item.icon className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-lg font-semibold text-foreground">{item.value}</p>
+              <p className="text-lg font-semibold tabular-nums text-foreground">{item.value}</p>
               <p className="text-xs text-muted">
                 {item.label} · {item.sub}
               </p>

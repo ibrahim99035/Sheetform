@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import type { GeoMarker } from "@/lib/analysis/geography";
 
 interface GeoMapProps {
@@ -47,6 +47,16 @@ function LeafletMap({ markers, height }: { markers: GeoMarker[]; height: number 
   const [Popup, setPopup] = useState<typeof import("react-leaflet").Popup | null>(null);
   const [tileFailed, setTileFailed] = useState(false);
   const [ready, setReady] = useState(false);
+  // Leaflet sets fill/stroke as SVG attributes, which cannot resolve CSS
+  // variables — read the resolved brand color once at mount instead.
+  // Safe in the initializer: this component is dynamically imported with
+  // ssr:false, so it only ever runs in the browser.
+  const [brandColor] = useState(() => {
+    const resolved = getComputedStyle(document.documentElement)
+      .getPropertyValue("--brand")
+      .trim();
+    return /^#[0-9a-fA-F]{3,8}$/.test(resolved) ? resolved : "#1ba290";
+  });
 
   useEffect(() => {
     Promise.all([
@@ -108,7 +118,7 @@ function LeafletMap({ markers, height }: { markers: GeoMarker[]; height: number 
           key={i}
           center={[m.lat, m.lng]}
           radius={Math.max(4, Math.min(20, (m.value / maxVal) * 20))}
-          pathOptions={{ color: "#1ba290", fillColor: "#1ba290", fillOpacity: 0.6 }}
+          pathOptions={{ color: brandColor, fillColor: brandColor, fillOpacity: 0.6 }}
         >
           <PP>
             <div className="text-sm">

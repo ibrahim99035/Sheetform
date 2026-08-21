@@ -87,6 +87,61 @@ function renderBody(
     y.value += 4;
     return;
   }
+  // Table rendering (columns + rows)
+  if (Array.isArray(body.columns) && Array.isArray(body.rows)) {
+    const columns = body.columns as { key: string; label: string }[];
+    const rows = body.rows as Record<string, unknown>[];
+    if (columns.length === 0 || rows.length === 0) return;
+
+    const colWidth = Math.floor(maxWidth / columns.length);
+    y.value += 6;
+
+    // Header row
+    doc.fontSize(8).fillColor("#666666");
+    for (let i = 0; i < columns.length; i++) {
+      doc.text(columns[i].label, 72 + i * colWidth, y.value, { width: colWidth - 4, lineGap: 1 });
+    }
+    y.value = doc.y + 2;
+
+    // Divider line
+    doc.moveTo(72, y.value).lineTo(72 + maxWidth, y.value).strokeColor("#cccccc").lineWidth(0.5).stroke();
+    y.value += 4;
+
+    // Data rows
+    doc.fontSize(8).fillColor("#333333");
+    for (const row of rows.slice(0, 50)) {
+      for (let i = 0; i < columns.length; i++) {
+        const val = row[columns[i].key];
+        doc.text(
+          val == null ? "—" : typeof val === "number" ? val.toLocaleString() : String(val),
+          72 + i * colWidth,
+          y.value,
+          { width: colWidth - 4, lineGap: 1 },
+        );
+      }
+      y.value = doc.y + 2;
+
+      if (y.value > 720) {
+        doc.addPage();
+        y.value = 64;
+        // Repeat header on new page
+        doc.fontSize(8).fillColor("#666666");
+        for (let i = 0; i < columns.length; i++) {
+          doc.text(columns[i].label, 72 + i * colWidth, y.value, { width: colWidth - 4, lineGap: 1 });
+        }
+        y.value = doc.y + 2;
+        doc.moveTo(72, y.value).lineTo(72 + maxWidth, y.value).strokeColor("#cccccc").lineWidth(0.5).stroke();
+        y.value += 4;
+        doc.fontSize(8).fillColor("#333333");
+      }
+    }
+    if (rows.length > 50) {
+      doc.fontSize(7).fillColor("#888888").text(`… and ${rows.length - 50} more rows`, 72, y.value);
+      y.value = doc.y + 4;
+    }
+    y.value += 4;
+    return;
+  }
   // Generic key/value grid (insight bodies).
   const entries = Object.entries(body).filter(([, v]) => typeof v !== "object");
   if (entries.length === 0) return;

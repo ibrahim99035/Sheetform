@@ -28,6 +28,9 @@ import type { ExpiryResult } from "@/lib/analysis/expiry";
 import type { SalesRankRow } from "@/lib/analysis/sales";
 import type { ColumnDef } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import dynamic from "next/dynamic";
+
+const GeoMap = dynamic(() => import("@/components/geo-map").then((m) => m.GeoMap), { ssr: false });
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -224,8 +227,13 @@ function GeographyCard({ state }: { state: ModuleState<GeographyModuleResult> })
           {geography.markers.length > 0 ? `${geography.markers.length} map markers` : "no coordinates yet"}
         </CardDescription>
       </CardHeader>
-      <CardContent className="overflow-x-auto p-0">
-        <MiniRank title={geography.cities.length > 0 ? "By city" : geography.regions.length > 0 ? "By region" : "By country"} rows={top.slice(0, 5)} />
+      <CardContent className="space-y-4">
+        {geography.markers.length > 0 && (
+          <GeoMap markers={geography.markers} />
+        )}
+        <div className="overflow-x-auto p-0">
+          <MiniRank title={geography.cities.length > 0 ? "By city" : geography.regions.length > 0 ? "By region" : "By country"} rows={top.slice(0, 5)} />
+        </div>
       </CardContent>
     </Card>
   );

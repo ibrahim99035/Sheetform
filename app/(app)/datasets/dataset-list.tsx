@@ -110,7 +110,7 @@ export function DatasetList({ initial }: { initial: Dataset[] }) {
                     </span>
                   )}
                 </p>
-                <p className="mt-0.5 text-sm text-muted">
+                <p className="mt-0.5 text-sm tabular-nums text-muted">
                   {dataset.row_count.toLocaleString()} rows
                   {dataset.sheet_name ? ` · ${dataset.sheet_name}` : ""} ·{" "}
                   {formatDate(dataset.created_at)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { AgGridReact } from "ag-grid-react";
 import type {
@@ -9,8 +9,7 @@ import type {
   ColDef,
   GridApi,
   GridReadyEvent,
-} from "ag-grid-community";
-import { Inbox, Loader2 } from "lucide-react";
+} from "ag-grid-community";import { Inbox, Loader2 } from "lucide-react";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import { useSupabase } from "@/lib/supabase/provider";
@@ -20,7 +19,8 @@ import { ESTIMATED_ROW_HEIGHT, TABLE_WINDOW_SIZE } from "@/lib/constants";
 import { formatCellValue, formatDateCell, viewSignature } from "@/lib/view";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { ColumnDef, SortDirection, ViewState } from "@/lib/types";
+import { cn } from "@/lib/cn";
+import type { ColumnDef, ViewState } from "@/lib/types";
 
 interface DataTableProps {
   datasetId: string;
@@ -38,6 +38,36 @@ interface GridRow {
   [key: string]: unknown;
 }
 
+type TableDensity = "comfortable" | "compact";
+
+const DENSITY_KEY = "siroq.table-density";
+const DENSITY_EVENT = "siroq:density";
+const DENSITY_HEIGHTS: Record<TableDensity, { row: number; header: number }> = {
+  comfortable: { row: ESTIMATED_ROW_HEIGHT, header: 38 },
+  compact: { row: 26, header: 30 },
+};
+
+function subscribeDensity(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(DENSITY_EVENT, callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(DENSITY_EVENT, callback);
+  };
+}
+function getDensitySnapshot(): TableDensity {
+  try {
+    return window.localStorage.getItem(DENSITY_KEY) === "compact"
+      ? "compact"
+      : "comfortable";
+  } catch {
+    return "comfortable";
+  }
+}
+function getServerDensity(): TableDensity {
+  return "comfortable";
+}
+
 export function DataTable({
   datasetId,
   columns,
@@ -47,6 +77,20 @@ export function DataTable({
   store,
 }: DataTableProps) {
   const supabase = useSupabase();
+  const density = useSyncExternalStore(
+    subscribeDensity,
+    getDensitySnapshot,
+    getServerDensity,
+  );
+
+  const changeDensity = (next: TableDensity) => {
+    try {
+      window.localStorage.setItem(DENSITY_KEY, next);
+    } catch {
+      // Storage may be unavailable (private mode); density stays session-only.
+    }
+    window.dispatchEvent(new Event(DENSITY_EVENT));
+  };
   const sig = viewSignature(view);
   const engine = store?.engine ?? "supabase";
 
@@ -181,30 +225,50 @@ export function DataTable({
               onSortChanged={onSortChanged}
               onCellValueChanged={onCellValueChanged}
               onBodyScroll={onBodyScroll}
-              headerHeight={38}
-              rowHeight={ESTIMATED_ROW_HEIGHT}
+              headerHeight={DENSITY_HEIGHTS[density].header}
+              rowHeight={DENSITY_HEIGHTS[density].row}
               suppressMenuHide
             />
           </div>
         )}
       </div>
 
-      <div className="flex items-center justify-between px-1 text-xs text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted">
         <span>
           {count !== undefined && (
-            <span className="font-medium text-foreground">{count.toLocaleString()}</span>
+            <span className="font-medium text-foreground tabular-nums-all">{count.toLocaleString()}</span>
           )}{" "}
           {count !== undefined && `row${count === 1 ? "" : "s"}`}
           {count !== undefined && view.filters.length > 0 && " filtered"}
           {engine === "duckdb" && <span className="ml-2 text-faint">· local engine</span>}
         </span>
-        <span className="flex items-center gap-1.5">
-          {isFetchingNextPage && <Loader2 className="h-3 w-3 animate-spin text-brand" />}
-          {isFetchingNextPage
-            ? "Loading more…"
-            : hasNextPage
-              ? "Scroll to load more"
-              : "All rows loaded"}
+        <span className="flex items-center gap-2.5">
+          <span className="flex items-center overflow-hidden rounded-lg border border-border">
+            {(["comfortable", "compact"] as const).map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => changeDensity(d)}
+                aria-pressed={density === d}
+                className={cn(
+                  "px-2 py-1 font-medium capitalize transition-colors",
+                  density === d
+                    ? "bg-brand-subtle text-brand"
+                    : "text-muted hover:bg-surface-subtle hover:text-foreground",
+                )}
+              >
+                {d}
+              </button>
+            ))}
+          </span>
+          <span className="flex items-center gap-1.5">
+            {isFetchingNextPage && <Loader2 className="h-3 w-3 animate-spin text-brand" />}
+            {isFetchingNextPage
+              ? "Loading more…"
+              : hasNextPage
+                ? "Scroll to load more"
+                : "All rows loaded"}
+          </span>
         </span>
       </div>
     </div>

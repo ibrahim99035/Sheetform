@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
+import { LanguageToggle } from "@/components/language-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function AuthLayout({
@@ -9,7 +10,8 @@ export default function AuthLayout({
 }) {
   return (
     <div className="relative flex min-h-full flex-1 items-center justify-center overflow-hidden bg-background px-4 py-12">
-      <div className="absolute right-5 top-5">
+      <div className="absolute right-5 top-5 flex items-center gap-2">
+        <LanguageToggle />
         <ThemeToggle />
       </div>
       <div aria-hidden className="pointer-events-none absolute inset-0">

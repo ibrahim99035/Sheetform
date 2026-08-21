@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Dataset } from "@/lib/types";
 import { buttonClasses } from "@/components/ui/button";
@@ -22,6 +22,12 @@ export default async function DatasetsPage() {
 
   const datasets = (data ?? []) as Dataset[];
 
+  const { data: membership } = await supabase
+    .from("org_members")
+    .select("organization_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   return (
     <div className="animate-slide-up">
       <div className="mb-5 flex items-center justify-between">
@@ -31,10 +37,21 @@ export default async function DatasetsPage() {
             {datasets.length}
           </span>
         </div>
-        <Link href="/datasets/new" className={buttonClasses("primary", "md")}>
-          <Plus className="h-4 w-4" />
-          New dataset
-        </Link>
+        <div className="flex items-center gap-2">
+          {membership && (
+            <Link
+              href={`/org/${membership.organization_id}`}
+              className={buttonClasses("secondary", "md")}
+            >
+              <Building2 className="h-4 w-4" />
+              Organization view
+            </Link>
+          )}
+          <Link href="/datasets/new" className={buttonClasses("primary", "md")}>
+            <Plus className="h-4 w-4" />
+            New dataset
+          </Link>
+        </div>
       </div>
       <DatasetList initial={datasets} />
     </div>

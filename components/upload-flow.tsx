@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { FileText, Import, RefreshCw } from "lucide-react";
 import { FileDropzone } from "@/components/file-dropzone";
 import { PreviewTable } from "@/components/preview-table";
+import { ServiceCoverageCard } from "@/components/service-coverage";
 import { parseFileForPreview, type PreviewSheet } from "@/lib/parse";
+import { assessServiceCoverage } from "@/lib/analysis/services";
 import { useSupabase } from "@/lib/supabase/provider";
-import type { InferredColumn } from "@/lib/types";
+import type { ColumnRole, InferredColumn } from "@/lib/types";
 import { createDataset } from "@/lib/actions/datasets";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,11 +29,24 @@ export function UploadFlow() {
   const [columns, setColumns] = useState<InferredColumn[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [dataRequests, setDataRequests] = useState<
+    { role: ColumnRole; label: string }[]
+  >([]);
 
   const populatedSheets = useMemo(
     () => sheets.filter((s) => s.hasData && s.headers.length > 0),
     [sheets],
   );
+
+  const roleMap = useMemo(() => {
+    const map: Partial<Record<ColumnRole, string>> = {};
+    for (const col of columns) {
+      if (col.role) {
+        map[col.role] = col.key;
+      }
+    }
+    return map;
+  }, [columns]);
 
   const handleFile = async (selected: File) => {
     setError(null);
@@ -86,6 +101,8 @@ export function UploadFlow() {
           role: c.role,
           role_confidence: c.role_confidence,
         })),
+        serviceCoverage: assessServiceCoverage(roleMap),
+        dataRequests: dataRequests.length > 0 ? dataRequests : undefined,
       });
 
       if (!result.ok) throw new Error(result.error);
@@ -105,6 +122,15 @@ export function UploadFlow() {
     setActiveSheet(null);
     setColumns([]);
     setError(null);
+    setDataRequests([]);
+  };
+
+  const handleRequestMore = (missing: { role: ColumnRole; label: string }[]) => {
+    setDataRequests((prev) => {
+      const existingRoles = new Set(prev.map((r) => r.role));
+      const newRequests = missing.filter((r) => !existingRoles.has(r.role));
+      return [...prev, ...newRequests];
+    });
   };
 
   return (
@@ -201,6 +227,32 @@ export function UploadFlow() {
             onColumnsChange={setColumns}
             rowHint={`Preview of the first ${Math.max(activeSheet.sampleRows.length, 0)} data rows.`}
           />
+
+          <ServiceCoverageCard
+            roleMap={roleMap}
+            onRequestMore={handleRequestMore}
+          />
+
+          {dataRequests.length > 0 && (
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                <p className="text-sm font-medium text-foreground">
+                  Data request summary
+                </p>
+                <ul className="list-inside list-disc space-y-0.5 text-sm text-muted">
+                  {dataRequests.map((r) => (
+                    <li key={r.role}>
+                      {r.label} <span className="text-faint">({r.role})</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-muted">
+                  This checklist will be saved with the dataset so the operator can
+                  follow up.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {error && (
             <p className="rounded-lg border border-danger/25 bg-danger-subtle px-3 py-2 text-sm text-danger-text">

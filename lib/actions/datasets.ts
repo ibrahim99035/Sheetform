@@ -14,6 +14,8 @@ export interface CreateDatasetInput {
   sheetName: string;
   columns: { label: string; type: ColumnType; role?: ColumnRole; role_confidence?: RoleConfidence }[];
   name?: string;
+  serviceCoverage?: unknown;
+  dataRequests?: { role: ColumnRole; label: string }[];
 }
 
 export type CreateDatasetResult =
@@ -89,17 +91,28 @@ export async function createDataset(
     role_confidence: input.columns[i].role_confidence ?? undefined,
   }));
 
+  const insertPayload: Record<string, unknown> = {
+    owner_id: user.id,
+    name: input.name?.trim() || baseName(input.fileName),
+    original_filename: input.fileName,
+    storage_path: input.storagePath,
+    status: "pending",
+    column_defs: columnDefs,
+  };
+
+  if (inspected.decision.kind === "picker") {
+    insertPayload.sheet_name = input.sheetName;
+  }
+  if (input.serviceCoverage) {
+    insertPayload.service_coverage = input.serviceCoverage;
+  }
+  if (input.dataRequests && input.dataRequests.length > 0) {
+    insertPayload.data_requests = input.dataRequests;
+  }
+
   const { data: dataset, error } = await supabase
     .from("datasets")
-    .insert({
-      owner_id: user.id,
-      name: input.name?.trim() || baseName(input.fileName),
-      original_filename: input.fileName,
-      storage_path: input.storagePath,
-      status: "pending",
-      column_defs: columnDefs,
-      sheet_name: inspected.decision.kind === "picker" ? input.sheetName : undefined,
-    })
+    .insert(insertPayload)
     .select("id")
     .single();
 

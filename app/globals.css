@@ -31,19 +31,29 @@
   --info-subtle: #eff6ff;
   --info-text: #1d4ed8;
 
+  /* Categorical chart palette — brand-led, hue-separated for series work. */
+  --chart-1: #1ba290;
+  --chart-2: #d97706;
+  --chart-3: #6d5cd3;
+  --chart-4: #d1566f;
+  --chart-5: #3592c9;
+  --chart-6: #7f9f3c;
+
   color-scheme: light;
 }
 
 .dark {
-  --background: #0b0d0a;
-  --surface: #14160f;
-  --surface-subtle: #1a1d15;
-  --surface-raised: #1e2118;
-  --border: #272a20;
-  --border-strong: #363b2e;
-  --text: #e9ebe4;
-  --text-muted: #a6ac9e;
-  --text-faint: #6d7367;
+  /* Charcoal neutrals with a faint teal undertone instead of the old
+     muddy green cast; keeps contrast high without tinting content. */
+  --background: #0c0f0d;
+  --surface: #131715;
+  --surface-subtle: #181d1b;
+  --surface-raised: #1c2220;
+  --border: #252c29;
+  --border-strong: #333c38;
+  --text: #e6ebe8;
+  --text-muted: #9aa5a0;
+  --text-faint: #656f6a;
 
   --brand: #2bc0aa;
   --brand-hover: #3fcdb8;
@@ -62,6 +72,14 @@
   --info: #60a5fa;
   --info-subtle: #0f1f3a;
   --info-text: #93c5fd;
+
+  /* Dark-mode chart variants: brighter and desaturated for dark surfaces. */
+  --chart-1: #2bc0aa;
+  --chart-2: #e8a04c;
+  --chart-3: #9d8df5;
+  --chart-4: #ec7d97;
+  --chart-5: #64b5e6;
+  --chart-6: #a9c268;
 
   color-scheme: dark;
 }
@@ -95,8 +113,21 @@
   --color-info-subtle: var(--info-subtle);
   --color-info-text: var(--info-text);
 
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Layered soft shadows: tighter ambient layer + wide, very faint
+     drop layer instead of a single hard offset. */
+  --shadow-sm: 0 1px 2px 0 rgb(16 24 20 / 0.05), 0 1px 1px -1px rgb(16 24 20 / 0.04);
+  --shadow-md: 0 2px 4px -1px rgb(16 24 20 / 0.06), 0 6px 16px -6px rgb(16 24 20 / 0.08);
+  --shadow-lg: 0 4px 8px -2px rgb(16 24 20 / 0.07), 0 16px 32px -12px rgb(16 24 20 / 0.12);
 
   --animate-fade-in: fade-in 0.25s ease-out both;
   --animate-slide-up: slide-up 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -177,6 +208,17 @@
     font-family: var(--font-sans);
   }
 
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p,
+  li {
+    text-wrap: pretty;
+  }
+
   ::selection {
     background-color: color-mix(in oklab, var(--brand) 22%, transparent);
   }
@@ -217,6 +259,36 @@
   ::-webkit-scrollbar-thumb:hover {
     background-color: var(--text-faint);
   }
+}
+
+@layer utilities {
+  /* Align digits in data-dense tables and KPI strips. */
+  .tabular-nums-all {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* AG Grid (quartz) tuned to the app design tokens so the data grid
+   follows light/dark themes without a separate stylesheet. */
+.ag-theme-quartz {
+  --ag-font-family: var(--font-sans);
+  --ag-font-size: 13px;
+  --ag-header-background-color: var(--surface-subtle);
+  --ag-subheader-background-color: var(--surface-subtle);
+  --ag-background-color: var(--surface);
+  --ag-odd-row-background-color: var(--surface);
+  --ag-foreground-color: var(--text);
+  --ag-secondary-foreground-color: var(--text-muted);
+  --ag-border-color: var(--border);
+  --ag-row-border-color: color-mix(in oklab, var(--border) 55%, transparent);
+  --ag-header-border-color: var(--border);
+  --ag-row-hover-color: color-mix(in oklab, var(--brand-subtle) 70%, transparent);
+  --ag-accent-color: var(--brand);
+  --ag-selected-row-background-color: var(--brand-subtle);
+  --ag-input-focus-border-color: var(--brand);
+  --ag-checkbox-checked-color: var(--brand);
+  --ag-invalid-color: var(--danger);
+  --ag-header-column-resize-handle-color: var(--border-strong);
 }
 
 @media (prefers-reduced-motion: reduce) {

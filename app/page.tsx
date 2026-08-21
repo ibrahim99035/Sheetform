@@ -30,7 +30,7 @@ const SERVICES = [
     nameEn: "Sales Analysis",
     nameAr: "تحليل البيع",
     descriptionEn: "Revenue, units, category mix, periods and product performance.",
-    descriptionAr: "الإيرادات، الوحدات، تmix التصنيفات، الفترات وأداء المنتجات.",
+    descriptionAr: "الإيرادات، الوحدات، مزيج التصنيفات، الفترات وأداء المنتجات.",
   },
   {
     icon: Package,
@@ -165,7 +165,7 @@ const BENEFITS = [
 const TESTIMONIALS_PLACEHOLDER = [
   {
     quoteEn: "SiroQ turned our raw pharmacy data into clear, actionable insights within minutes.",
-    quoteAr: " حوّل SiroQ بيانات صيدلتنا الخام إلى رؤى واضحة وعملية في دقائق.",
+    quoteAr: "حوّل SiroQ بيانات صيدلتنا الخام إلى رؤى واضحة وعملية في دقائق.",
     nameEn: "Pharmacy Manager",
     nameAr: "مدير الصيدلية",
   },
@@ -276,6 +276,9 @@ export default async function HomePage() {
                   {svc.nameAr}
                 </p>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted">{svc.descriptionEn}</p>
+                <p className="mt-1 text-right text-sm leading-relaxed text-muted" dir="rtl">
+                  {svc.descriptionAr}
+                </p>
               </div>
             ))}
           </div>
@@ -304,6 +307,9 @@ export default async function HomePage() {
                 <h3 className="text-base font-semibold text-foreground">{step.stepEn}</h3>
                 <p className="text-sm font-medium text-brand" dir="rtl">{step.stepAr}</p>
                 <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">{step.descriptionEn}</p>
+                <p className="mt-1 max-w-xs text-right text-sm leading-relaxed text-muted" dir="rtl">
+                  {step.descriptionAr}
+                </p>
               </div>
             ))}
           </div>
@@ -336,6 +342,9 @@ export default async function HomePage() {
                 <h3 className="text-sm font-semibold text-foreground">{f.titleEn}</h3>
                 <p className="text-right text-sm font-medium text-brand" dir="rtl">{f.titleAr}</p>
                 <p className="mt-1 text-sm text-muted">{f.descriptionEn}</p>
+                <p className="mt-1 text-right text-sm leading-relaxed text-muted" dir="rtl">
+                  {f.descriptionAr}
+                </p>
               </div>
             ))}
           </div>
@@ -368,6 +377,9 @@ export default async function HomePage() {
                 <h3 className="text-base font-semibold text-foreground">{b.titleEn}</h3>
                 <p className="text-right text-sm font-medium text-brand" dir="rtl">{b.titleAr}</p>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{b.descriptionEn}</p>
+                <p className="mt-1 text-right text-sm leading-relaxed text-muted" dir="rtl">
+                  {b.descriptionAr}
+                </p>
               </div>
             ))}
           </div>

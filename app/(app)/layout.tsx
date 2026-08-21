@@ -1,8 +1,19 @@
 import Link from "next/link";
-import { FileText, FolderOpen, LogOut, Plus, Settings, ShieldCheck } from "lucide-react";
+import {
+  FileText,
+  FolderOpen,
+  LogOut,
+  Plus,
+  Settings,
+  ShieldCheck,
+  LayoutDashboard,
+} from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/admin";
+import { AppNav, type NavItem } from "@/components/app-nav";
+import { LanguageToggle } from "@/components/language-toggle";
+import { Trans } from "@/components/trans";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -19,6 +30,38 @@ export default async function AppLayout({
   const admin = await isSuperAdmin();
   const initial = (user?.email ?? "?").charAt(0).toUpperCase();
 
+  const navItems: NavItem[] = [
+    {
+      href: "/dashboard",
+      labelKey: "nav.dashboard",
+      icon: <LayoutDashboard />,
+      mobileIconOnly: false,
+    },
+    {
+      href: "/datasets",
+      labelKey: "nav.datasets",
+      icon: <FileText />,
+      mobileIconOnly: false,
+    },
+    {
+      href: "/reports",
+      labelKey: "nav.reports",
+      icon: <FileText />,
+      mobileIconOnly: false,
+    },
+    {
+      href: "/applications",
+      labelKey: "nav.applications",
+      icon: <FolderOpen />,
+      mobileIconOnly: false,
+    },
+    { href: "/datasets/new", labelKey: "nav.newDataset", icon: <Plus /> },
+    ...(admin
+      ? ([{ href: "/admin", labelKey: "nav.admin", icon: <ShieldCheck /> }] as NavItem[])
+      : []),
+    { href: "/settings", labelKey: "nav.settings", icon: <Settings /> },
+  ];
+
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
@@ -27,61 +70,7 @@ export default async function AppLayout({
             <Link href="/datasets" aria-label="SiroQ home">
               <Logo />
             </Link>
-            <nav className="flex items-center gap-1 text-sm">
-              <Link
-                href="/dashboard"
-                className="rounded-md px-3 py-2 text-muted transition hover:bg-surface-subtle hover:text-foreground sm:py-1.5"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/datasets"
-                className="rounded-md px-3 py-2 text-muted transition hover:bg-surface-subtle hover:text-foreground sm:py-1.5"
-              >
-                <FileText className="mr-1 inline h-3.5 w-3.5 sm:hidden" />
-                Datasets
-              </Link>
-              <Link
-                href="/reports"
-                className="rounded-md px-3 py-2 text-muted transition hover:bg-surface-subtle hover:text-foreground sm:py-1.5"
-              >
-                <FileText className="mr-1 inline h-3.5 w-3.5 sm:hidden" />
-                Reports
-              </Link>
-              <Link
-                href="/applications"
-                className="rounded-md px-3 py-2 text-muted transition hover:bg-surface-subtle hover:text-foreground sm:py-1.5"
-              >
-                <FolderOpen className="mr-1 inline h-3.5 w-3.5 sm:hidden" />
-                Applications
-              </Link>
-              <Link
-                href="/datasets/new"
-                aria-label="New dataset"
-                className="flex h-10 w-10 items-center justify-center rounded-md text-muted transition hover:bg-surface-subtle hover:text-foreground sm:h-auto sm:w-auto sm:gap-1.5 sm:px-3 sm:py-1.5"
-              >
-                <Plus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-                <span className="hidden sm:inline">New dataset</span>
-              </Link>
-              {admin && (
-                <Link
-                  href="/admin"
-                  aria-label="Admin panel"
-                  className="flex h-10 w-10 items-center justify-center rounded-md text-muted transition hover:bg-surface-subtle hover:text-foreground sm:h-auto sm:w-auto sm:gap-1.5 sm:px-3 sm:py-1.5"
-                >
-                  <ShieldCheck className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-                  <span className="hidden sm:inline">Admin</span>
-                </Link>
-              )}
-              <Link
-                href="/settings"
-                aria-label="Settings"
-                className="flex h-10 w-10 items-center justify-center rounded-md text-muted transition hover:bg-surface-subtle hover:text-foreground sm:h-auto sm:w-auto sm:gap-1.5 sm:px-3 sm:py-1.5"
-              >
-                <Settings className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-                <span className="hidden sm:inline">Settings</span>
-              </Link>
-            </nav>
+            <AppNav items={navItems} />
           </div>
           <div className="flex items-center gap-2">
             {user?.email && (
@@ -92,6 +81,7 @@ export default async function AppLayout({
                 <span className="max-w-[180px] truncate">{user.email}</span>
               </span>
             )}
+            <LanguageToggle />
             <ThemeToggle />
             <form action={signOut}>
               <button
@@ -99,7 +89,9 @@ export default async function AppLayout({
                 className="inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-muted transition hover:bg-surface-subtle hover:text-foreground sm:h-8"
               >
                 <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Sign out</span>
+                <span className="hidden sm:inline">
+                  <Trans k="nav.signOut" />
+                </span>
               </button>
             </form>
           </div>

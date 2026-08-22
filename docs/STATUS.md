@@ -108,7 +108,7 @@ Columns:
 
 ## Open questions / handoffs (add anything ambiguous here)
 
-- **Supabase project link mismatch (found 2026-08-21):** the app's `.env.local` points to `vhgkjxdwptirmyqjhiks.supabase.co`, but the Supabase CLI is linked to `tavfqvcokeixntpljyhy` — `supabase db push` has been applying migrations to the WRONG project. `vhgk…` is missing at least `20260819120000_dataset_service_coverage.sql` (upload fails: "Could not find the 'service_coverage' column"). Quick patch staged in `scripts/patch-vhgk-service-coverage.sql`; durable fix = `npx supabase link --project-ref vhgkjxdwptirmyqjhiks && npx supabase db push`. Needs an owner decision: which project is canonical?
+- **Supabase project link mismatch (RESOLVED 2026-08-22):** Linked CLI directly to canonical project `vhgkjxdwptirmyqjhiks`, repaired migration history state, and ran `supabase db push` to apply all 38 migrations successfully.
 
 - **P6.4 blocked:** rotating the service-role key needs the owner of the secret /.env.local — assign an owner and document rotation in `docs/OPS.md` before unblocking.
 - **P5 seed copy:** Arabic body copy (9 lessons) should be drafted/approved with the client before the migration is written.

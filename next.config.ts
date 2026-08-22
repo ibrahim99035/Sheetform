@@ -13,7 +13,10 @@ const connectSrc = ["'self'", SUPABASE_HOST ? `https://${SUPABASE_HOST} wss://${
   .join(" ");
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'wasm-unsafe-eval'",
+  // 'unsafe-inline' is required: Next.js injects inline bootstrap/flight/theme
+  // scripts whose hashes change every build; nonce-based strict CSP would force
+  // dynamic rendering of all pages.
+  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
